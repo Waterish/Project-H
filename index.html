@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeSim - A Real-Life Simulation Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-100 text-slate-800 flex justify-center min-h-screen py-12">
+
+    <div id="loading-overlay" class="absolute inset-0 bg-slate-100 bg-opacity-90 flex flex-col items-center justify-center z-50 hidden">
+        <svg class="animate-spin h-10 w-10 text-slate-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p class="mt-4 text-lg text-slate-600">Loading your life...</p>
+    </div>
+
+    <div id="game-container" class="relative w-full max-w-3xl mx-auto p-4 md:p-6 bg-white rounded-2xl shadow-xl hidden">
+        <!-- Item Toast Container -->
+        <div id="toast-container" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-4 pointer-events-none z-40">
+            <!-- Toasts are dynamically added here -->
+        </div>
+
+        <button id="new-life-btn" class="absolute top-4 left-4 z-10 action-button bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">New Life</button>
+        <div id="endless-mode-indicator" class="absolute top-16 left-4 text-purple-600 font-bold text-sm hidden">♾️ Endless Mode</div>
+        <div id="trashcan-indicator" class="absolute top-24 left-4 text-gray-500 font-bold text-xs hidden">🗑️ Trashcan of Fate</div>
+        <button id="pause-btn" class="absolute top-4 right-4 z-10 action-button bg-slate-400 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded-lg shadow-md">Pause</button>
+        
+        <header class="text-center mb-6 pt-12">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-700">LifeSim</h1>
+            <p class="text-slate-500">Your very own virtual life</p>
+            <div class="text-xs text-slate-400 mt-2">User ID: <span id="userIdDisplay"></span></div>
+        </header>
+
+        <!-- Stats Section -->
+        <div class="space-y-4 mb-6">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="flex items-center"><span class="text-2xl mr-2">💰</span><div class="w-full"><div class="flex justify-between items-baseline"><span class="text-sm font-medium text-slate-700">Money</span><span id="money-stat" class="text-base font-medium text-green-600">$0</span></div></div></div>
+                <div class="flex items-center"><span class="text-2xl mr-2">🍔</span><div class="w-full"><div class="flex justify-between items-baseline"><span class="text-sm font-medium text-slate-700">Food</span><span id="food-stat" class="text-base font-medium text-orange-600">0</span></div></div></div>
+                <div class="flex items-center"><span class="text-2xl mr-2">🧰</span><div class="w-full"><div class="flex justify-between items-baseline"><span class="text-sm font-medium text-slate-700">Supplies</span><span id="supplies-stat" class="text-base font-medium text-yellow-600">0</span></div></div></div>
+                <div id="ammo-stat-container" class="flex items-center hidden"><span class="text-2xl mr-2">⚡</span><div class="w-full"><div class="flex justify-between items-baseline"><span class="text-sm font-medium text-slate-700">Ammo</span><span id="ammo-stat" class="text-base font-medium text-sky-600">0</span></div></div></div>
+                <div id="relic-stat-container" class="flex items-center hidden"><span class="text-2xl mr-2">💎</span><div class="w-full"><div class="flex justify-between items-baseline"><span class="text-sm font-medium text-slate-700">Relics</span><span id="relic-stat" class="text-base font-medium text-cyan-600">0</span></div></div></div>
+                <div id="science-stat-container" class="flex items-center hidden"><span class="text-2xl mr-2">🔬</span><div class="w-full"><div class="flex justify-between items-baseline"><span class="text-sm font-medium text-slate-700">Science</span><span id="science-stat" class="text-base font-medium text-indigo-600">0</span></div></div></div>
+                <div id="ether-bubble-stat-container" class="flex items-center hidden"><span class="text-2xl mr-2">🫧</span><div class="w-full"><div class="flex justify-between items-baseline"><span class="text-sm font-medium text-slate-700">Ether</span><span id="ether-bubble-stat" class="text-base font-medium text-violet-600">0</span></div></div></div>
+                <div id="life-crystal-stat-container" class="flex items-center hidden"><span class="text-2xl mr-2">🔮</span><div class="w-full"><div class="flex justify-between items-baseline"><span class="text-sm font-medium text-slate-700">Crystals</span><span id="life-crystal-stat" class="text-base font-medium text-fuchsia-600">0</span></div></div></div>
+            </div>
+            <!-- Vorpal Effect Display -->
+            <div id="vorpal-effect-display" class="vorpal-effect-display text-center p-2 rounded-lg bg-slate-100 border border-slate-200 hidden">
+                <p class="font-bold text-sm text-purple-700">✨ Vorpal Effect: <span id="vorpal-effect-name">None</span></p>
+                <p id="vorpal-effect-description" class="text-xs text-slate-500"></p>
+            </div>
+            <!-- Progress Bars -->
+            <div><div class="flex justify-between mb-1"><span class="text-base font-medium text-slate-700">❤️ Energy</span><span id="energy-warning" class="text-sm font-bold text-red-600 hidden jiggle">Very Weak</span><span id="energy-value" class="text-sm font-medium text-slate-500">0/100</span></div><div class="w-full bg-slate-200 rounded-full h-4"><div id="energy-bar" class="bg-yellow-400 h-4 rounded-full progress-bar-fill" style="width: 0%"></div></div></div>
+            <div><div class="flex justify-between mb-1"><span class="text-base font-medium text-slate-700">😊 Happiness</span><span id="happiness-warning" class="text-sm font-bold text-red-600 hidden jiggle">Depressed</span><span id="happiness-value" class="text-sm font-medium text-slate-500">0/100</span></div><div class="w-full bg-slate-200 rounded-full h-4"><div id="happiness-bar" class="bg-sky-400 h-4 rounded-full progress-bar-fill" style="width: 0%"></div></div></div>
+            <div><div class="flex justify-between mb-1"><span class="text-base font-medium text-slate-700">🍴 Hunger</span><span id="hunger-warning" class="text-sm font-bold text-red-600 hidden jiggle">Starving</span><span id="hunger-value" class="text-sm font-medium text-slate-500">0/100</span></div><div class="w-full bg-slate-200 rounded-full h-4"><div id="hunger-bar" class="bg-orange-400 h-4 rounded-full progress-bar-fill" style="width: 0%"></div></div></div>
+            <div><div class="flex justify-between mb-1"><span class="text-base font-medium text-slate-700">👨‍👩‍👧‍👦 Family</span><span id="family-status" class="text-xs font-bold hidden px-2 py-1 rounded-full"></span><span id="family-value" class="text-sm font-medium text-slate-500">0/100</span></div><div class="w-full bg-slate-200 rounded-full h-4"><div id="family-bar" class="bg-purple-400 h-4 rounded-full progress-bar-fill" style="width: 0%"></div></div></div>
+            <div><div class="flex justify-between mb-1"><span class="text-base font-medium text-slate-700">🧑‍🤝‍🧑 Friends</span><span id="friends-status" class="text-xs font-bold hidden px-2 py-1 rounded-full"></span><span id="friends-value" class="text-sm font-medium text-slate-500">0/100</span></div><div class="w-full bg-slate-200 rounded-full h-4"><div id="friends-bar" class="bg-pink-400 h-4 rounded-full progress-bar-fill" style="width: 0%"></div></div></div>
+        </div>
+
+        <!-- Actions Section -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <button id="work-btn" class="action-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg shadow-md">💼 Work</button>
+            <button id="sleep-btn" class="action-button bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-3 rounded-lg shadow-md">😴 Sleep</button>
+            <button id="eat-btn" class="action-button bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg shadow-md">🍴 Eat (🍔)</button>
+            <button id="play-btn" class="action-button bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-3 rounded-lg shadow-md">🎮 Play ($5)</button>
+            <button id="family-btn" class="action-button bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 rounded-lg shadow-md">👨‍👩‍👧‍👦 Visit Family</button>
+            <button id="friends-btn" class="action-button bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 px-3 rounded-lg shadow-md">🧑‍🤝‍🧑 Hang Out ($15)</button>
+            <button id="shop-btn" class="action-button bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-3 rounded-lg shadow-md">🛒 Shop</button>
+            <button id="reflect-btn" class="action-button bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold py-2 px-3 rounded-lg shadow-md">✍️ Journal</button>
+            <button id="portal-btn" class="action-button bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-3 rounded-lg shadow-md col-span-2 sm:col-span-4 hidden">🌀 Explore Portal (🧰)</button>
+        </div>
+         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-3">
+            <button id="view-relics-btn" class="action-button col-span-1 bg-teal-700 hover:bg-teal-800 text-white font-bold py-2 px-3 rounded-lg shadow-md hidden">💎 Relics</button>
+            <button id="contraptions-btn" class="action-button col-span-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 px-3 rounded-lg shadow-md hidden">🔨 Contraptions</button>
+            <button id="vorpal-gear-btn" class="action-button col-span-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg shadow-md hidden">⚙️ Vorpal Gear</button>
+            <button id="compendium-btn" class="action-button col-span-1 bg-stone-500 hover:bg-stone-600 text-white font-bold py-2 px-3 rounded-lg shadow-md hidden">📖 Compendium</button>
+        </div>
+
+        <!-- Message Log Section -->
+        <div class="mt-6 message-log-container bg-slate-50 rounded-lg p-3 shadow-inner">
+            <div id="message-log" class="h-full overflow-y-auto text-sm text-slate-600 space-y-2"></div>
+        </div>
+    </div>
+    
+    <!-- Modals -->
+    <div id="new-life-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden"><div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-auto"><h2 class="text-3xl font-bold text-slate-800 mb-4">Start a New Life</h2><p class="text-slate-600 mb-6">Choose your game mode. Online games are saved to the cloud, while offline games are for a single session.</p><div class="flex flex-col gap-3"><button id="start-online-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg">Online Game</button><button id="start-offline-btn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg">Offline Game</button><button id="cancel-new-life-btn" class="text-slate-500 hover:text-slate-700 mt-2">Cancel</button></div></div></div>
+    
+    <div id="game-over-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden"><div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-auto"><h2 id="game-over-title" class="text-3xl font-bold text-slate-800 mb-4">Game Over</h2><p id="game-over-message" class="text-slate-600 mb-6"></p><div class="flex flex-col gap-3"><button id="restart-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform hover:scale-105">Start a New Life</button><button id="continue-btn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform hover:scale-105 hidden">Continue Playing</button></div></div></div>
+    
+    <div id="relic-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden"><div class="bg-white p-6 rounded-2xl shadow-2xl max-w-lg w-full mx-4"><h2 class="text-2xl font-bold text-slate-800 mb-4">💎 Relic Compendium</h2><div class="flex justify-end gap-4 text-lg font-bold mb-2"><span class="text-green-600">💰 $<span id="relic-money-display">0</span></span><span class="text-indigo-600">🔬 <span id="relic-science-display">0</span></span></div><div id="relic-list" class="max-h-96 overflow-y-auto space-y-3 pr-2"></div><button id="close-relic-modal-btn" class="mt-6 w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg">Close</button></div></div>
+    
+    <!-- SifeLim Encounter Modal -->
+    <div id="sifelim-encounter-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden"><div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-auto"><h2 class="text-3xl font-bold text-rose-800 mb-4">Danger!</h2><p class="text-slate-600 mb-6">"Mwahaha! You're in my domain now. I am SifeLim!"<br><br>You barely escaped the portal after encountering the terrifying creature. It seems the portal is more dangerous than you thought. You'll need to be better prepared to face it again.</p><button id="close-sifelim-modal-btn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg">Continue</button></div></div>
+
+    <!-- Final SifeLim Encounter Modal -->
+    <div id="sifelim-final-encounter-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden"><div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-auto"><h2 class="text-3xl font-bold text-rose-800 mb-4">Final Showdown!</h2><p class="text-slate-600 mb-6">SifeLim appears, bellowing its name! With a flash of light, your Neutralizer begins to hum with immense power, ready to be unleashed.</p><button id="fire-neutralizer-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg">Fire the Neutralizer!</button></div></div>
+    
+    <!-- Endless Mode Modal -->
+    <div id="endless-mode-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden"><div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-auto"><h2 class="text-3xl font-bold text-purple-700 mb-4">Endless Mode</h2><p class="text-slate-600 mb-6">The portal is stable, but echoes of defeated monsters now roam within it. Your life continues...</p><button id="close-endless-modal-btn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg">Onward!</button></div></div>
+
+    <!-- Portal Discovery Modal -->
+    <div id="portal-discovery-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden"><div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-auto"><h2 class="text-3xl font-bold text-cyan-700 mb-4">A Shimmering Gate! 🌀</h2><p class="text-slate-600 mb-6">While exploring with friends, you stumbled upon a shimmering, otherworldly portal. New opportunities for exploration are now available. What mysteries could it hold?</p><button id="close-portal-discovery-modal-btn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg">Interesting...</button></div></div>
+
+    <!-- First Relic Modal -->
+    <div id="first-relic-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden"><div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-auto"><h2 class="text-3xl font-bold text-amber-600 mb-4">An Ancient Relic! 💎</h2><p class="text-slate-600 mb-6">You've found your first relic from the portal! This strange object hums with a faint energy. You can now view your relic collection, and you have a feeling you could use them for scientific experiments...</p><button id="close-first-relic-modal-btn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg">Fascinating!</button></div></div>
+
+    <!-- First Life Crystal Modal -->
+    <div id="first-life-crystal-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden"><div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-auto"><h2 class="text-3xl font-bold text-fuchsia-600 mb-4">A Glimmer of Hope!</h2><p class="text-slate-600 mb-6">You've recovered a Life Crystal from a powerful foe. This pulsating gem seems to be the key to something greater. The schematics for a mysterious "Neutralizer" contraption have become clear in your mind.</p><button id="close-first-life-crystal-modal-btn" class="bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg">Incredible!</button></div></div>
+    
+    <!-- Portal Life Crystal Found Modal -->
+    <div id="life-crystal-found-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden"><div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-auto"><h2 class="text-3xl font-bold text-fuchsia-600 mb-4">A Rare Find! 🔮</h2><p class="text-slate-600 mb-6">Against all odds, you've found a Life Crystal just floating in the portal's strange atmosphere! This could be incredibly useful.</p><button id="close-life-crystal-found-modal-btn" class="bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg">Amazing!</button></div></div>
+
+    <!-- Compendium Completion Modal -->
+    <div id="completion-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden"><div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-auto"><h2 id="completion-title" class="text-3xl font-bold text-amber-500 mb-4">Category Complete!</h2><p id="completion-message" class="text-slate-600 mb-6"></p><p id="completion-reward" class="text-slate-700 font-bold mb-6"></p><button id="close-completion-modal-btn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg">Awesome!</button></div></div>
+
+    <!-- Neutralizer Built Modal -->
+    <div id="neutralizer-built-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden"><div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-auto"><h2 class="text-3xl font-bold text-emerald-500 mb-4">The Final Weapon!</h2><p class="text-slate-600 mb-6">The Neutralizer is complete! It hums with immense power, seemingly capable of nullifying the portal's master. You feel ready to face SifeLim one last time.</p><button id="close-neutralizer-built-modal-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg">Let's do this.</button></div></div>
+
+    <!-- Shop Modal -->
+    <div id="shop-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-slate-800">🛒 Shop</h2>
+                <div class="flex items-center gap-2">
+                    <span id="shop-bonus-indicator" class="hidden text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">💳 Family Credit!</span>
+                    <span id="shop-penalty-indicator" class="hidden text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full">💸 Homeless</span>
+                </div>
+            </div>
+            <div class="flex justify-end gap-4 text-lg font-bold mb-2">
+                <span class="text-green-600">💰 $<span id="shop-money-display">0</span></span>
+            </div>
+            <div class="space-y-4">
+                <div class="shop-item p-4 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-orange-700">Food 🍔</h3>
+                            <p class="text-slate-600 text-sm">A single meal to restore your hunger.</p>
+                            <p class="text-slate-500 text-xs mt-1">Cost: <span id="food-cost">$10</span> / Have: <span id="food-have">0</span></p>
+                        </div>
+                        <button id="shop-buy-food-btn" class="action-button bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg">Buy</button>
+                    </div>
+                </div>
+                <div class="shop-item p-4 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-yellow-700">Supplies 🧰</h3>
+                            <p class="text-slate-600 text-sm">Good to have during an adventure.</p>
+                            <p class="text-slate-500 text-xs mt-1">Cost: <span id="supplies-cost">$20</span> / Have: <span id="supplies-have">0</span></p>
+                        </div>
+                        <button id="shop-buy-supplies-btn" class="action-button bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg">Buy</button>
+                    </div>
+                </div>
+                <div id="shop-ammo-item" class="shop-item p-4 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 id="ammo-name" class="font-bold text-sky-700">???</h3>
+                            <p id="ammo-desc" class="text-slate-600 text-sm">Ammo for some kind of otherworldly weapon I suppose.</p>
+                            <p class="text-slate-500 text-xs mt-1">Cost: <span id="ammo-cost">$80</span> / Have: <span id="ammo-have">0</span></p>
+                        </div>
+                        <button id="shop-buy-ammo-btn" class="action-button bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg">Buy</button>
+                    </div>
+                </div>
+                <div id="shop-trashcan-item" class="shop-item p-4 rounded-lg hidden">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-blue-800">Trashcan of Fate 🗑️</h3>
+                            <p class="text-slate-600 text-sm">Recycles a used relic every few days.</p>
+                            <p class="text-slate-500 text-xs mt-1">Cost: $2000</p>
+                        </div>
+                        <button id="shop-buy-trashcan-btn" class="action-button bg-yellow-400 hover:bg-yellow-500 text-slate-800 font-bold py-2 px-4 rounded-lg">Buy</button>
+                    </div>
+                </div>
+            </div>
+            <button id="close-shop-modal-btn" class="mt-6 w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg">Close</button>
+        </div>
+    </div>
+
+    <!-- Contraptions Modal -->
+    <div id="contraption-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-2xl w-full mx-4">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">🔨 Contraption Workshop</h2>
+            <div class="flex justify-end gap-4 text-lg font-bold mb-2">
+                <span class="text-green-600">💰 $<span id="contraption-money-display">0</span></span>
+                <span class="text-indigo-600">🔬 <span id="contraption-science-display">0</span></span>
+            </div>
+            <div id="contraption-list" class="space-y-4">
+                 <!-- Compendium Item -->
+                <div id="compendium-item" class="contraption-item p-4 rounded-lg">
+                     <div class="flex justify-between items-center">
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-stone-700">Compendium</h3>
+                            <p class="text-slate-600 text-sm">A magical book to track your discoveries.</p>
+                            <p class="text-slate-500 text-xs mt-1">Cost: <span id="compendium-cost-display">1 Science, $40</span></p>
+                        </div>
+                        <button id="build-compendium-btn" class="action-button bg-stone-500 hover:bg-stone-600 text-white font-bold py-2 px-4 rounded-lg flex-shrink-0 ml-4">Build</button>
+                    </div>
+                </div>
+                <!-- Vorpal Gear Item -->
+                <div id="vorpal-gear-item" class="contraption-item p-4 rounded-lg">
+                     <div class="flex justify-between items-center">
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-purple-700">Vorpal Gear</h3>
+                            <p class="text-slate-600 text-sm">A device to channel the energy of relics. Unlocks 3 equipment slots.</p>
+                            <p class="text-slate-500 text-xs mt-1">Cost: <span id="vorpal-gear-cost-display">5 Science, $100</span></p>
+                        </div>
+                        <button id="build-vorpal-gear-btn" class="action-button bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg flex-shrink-0 ml-4">Build</button>
+                    </div>
+                </div>
+                 <!-- Zapper Item -->
+                <div id="zapper-item" class="contraption-item p-4 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-rose-700">Zapper</h3>
+                            <p class="text-slate-600 text-sm">A basic weapon to fight off lesser elemental creatures in the portal. Consumes 1 Ammo.</p>
+                            <p class="text-slate-500 text-xs mt-1">Cost: <span id="zapper-cost-display">10 Science, $200</span></p>
+                        </div>
+                        <button id="build-zapper-btn" class="action-button bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 px-4 rounded-lg flex-shrink-0 ml-4">Build</button>
+                    </div>
+                </div>
+                <!-- Elemental Discharger Item -->
+                <div id="elemental-discharger-item" class="contraption-item p-4 rounded-lg">
+                     <div class="flex justify-between items-center">
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-teal-700">Elemental Discharger</h3>
+                            <p class="text-slate-600 text-sm">A powerful weapon for defeating large elemental threats. Consumes 3 Ammo.</p>
+                            <p class="text-slate-500 text-xs mt-1">Cost: <span id="elemental-discharger-cost-display">15 Science, $300</span></p>
+                        </div>
+                        <button id="build-elemental-discharger-btn" class="action-button bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg flex-shrink-0 ml-4">Build</button>
+                    </div>
+                </div>
+                 <!-- Neutralizer Item -->
+                <div id="neutralizer-item" class="contraption-item p-4 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <div class="flex-grow">
+                            <h3 id="neutralizer-name" class="font-bold text-fuchsia-700">???</h3>
+                            <p class="text-slate-600 text-sm">The ultimate weapon, capable of defeating the portal's master.</p>
+                            <p class="text-slate-500 text-xs mt-1">Cost: <span id="neutralizer-cost">???</span></p>
+                        </div>
+                        <button id="build-neutralizer-btn" class="action-button bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-bold py-2 px-4 rounded-lg flex-shrink-0 ml-4">Build</button>
+                    </div>
+                </div>
+            </div>
+            <button id="close-contraption-modal-btn" class="mt-6 w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg">Close</button>
+        </div>
+    </div>
+    
+    <!-- Vorpal Gear Modal -->
+    <div id="vorpal-gear-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-4xl w-full mx-4">
+            <h2 class="text-2xl font-bold text-slate-800 mb-2">⚙️ Vorpal Gear Interface</h2>
+            <div id="vorpal-gear-effect-display" class="text-center p-2 mb-4 rounded-lg bg-slate-100 border border-slate-200 hidden">
+                <p class="font-bold text-sm text-purple-700">✨ Active Effect: <span id="modal-vorpal-effect-name">None</span></p>
+                <p id="modal-vorpal-effect-description" class="text-xs text-slate-500"></p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Equipped Relics -->
+                <div class="md:col-span-1">
+                    <h3 class="font-semibold mb-2 text-center">Equipped Relics</h3>
+                    <div id="vorpal-gear-slots" class="space-y-3">
+                        <!-- Slots populated by JS -->
+                    </div>
+                </div>
+                <!-- Inventory -->
+                <div class="md:col-span-2">
+                    <h3 class="font-semibold mb-2">Relic Inventory</h3>
+                    <div id="vorpal-gear-inventory" class="h-64 overflow-y-auto bg-slate-50 p-3 rounded-lg grid grid-cols-2 gap-3">
+                        <!-- Inventory populated by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 p-3 bg-slate-50 rounded-lg">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="font-semibold">Vorpal Discovery</h3>
+                        <p class="text-xs text-slate-500">Discovered combo effects are shown below.</p>
+                    </div>
+                    <button id="ether-seal-btn" class="action-button bg-violet-500 hover:bg-violet-600 text-white font-bold py-2 px-4 rounded-lg" disabled>🫧 Ether Seal</button>
+                </div>
+                <div id="vorpal-discovery-tracker" class="mt-3 flex justify-center items-center gap-x-4 gap-y-2 flex-wrap text-2xl">
+                    <!-- Tracker populated by JS -->
+                </div>
+            </div>
+            <button id="close-vorpal-gear-modal-btn" class="mt-6 w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg">Close</button>
+        </div>
+    </div>
+
+    <!-- Compendium Modal -->
+    <div id="compendium-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-4xl w-full mx-4">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">📖 Compendium</h2>
+            <div class="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+                <div>
+                    <h3 class="font-semibold mb-2 text-cyan-700">Relics <span id="relics-completed-indicator" class="hidden text-xs font-bold text-amber-500 bg-amber-100 px-2 py-1 rounded-full align-middle">COMPLETED</span></h3>
+                    <div id="compendium-relics" class="grid grid-cols-3 sm:grid-cols-5 gap-2 text-xs"></div>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2 text-rose-700">Monsters <span id="monsters-completed-indicator" class="hidden text-xs font-bold text-amber-500 bg-amber-100 px-2 py-1 rounded-full align-middle">COMPLETED</span></h3>
+                    <div id="compendium-monsters" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm"></div>
+                </div>
+                 <div>
+                    <h3 class="font-semibold mb-2 text-purple-700">Vorpal Combos <span id="vorpal-completed-indicator" class="hidden text-xs font-bold text-amber-500 bg-amber-100 px-2 py-1 rounded-full align-middle">COMPLETED</span></h3>
+                    <div id="compendium-vorpal-effects" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm"></div>
+                </div>
+            </div>
+            <button id="close-compendium-modal-btn" class="mt-6 w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg">Close</button>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

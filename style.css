@@ -1,0 +1,107 @@
+body {
+    font-family: 'Inter', sans-serif;
+}
+.progress-bar-fill {
+    transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
+}
+.action-button {
+    transition: background-color 0.2s, transform 0.2s, opacity 0.2s;
+}
+.action-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+.action-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+.action-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+.message-log-container {
+    height: 150px; /* Fixed height for the log */
+}
+/* Custom scrollbar for the log */
+.message-log::-webkit-scrollbar {
+    width: 6px;
+}
+.message-log::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+.message-log::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 10px;
+}
+.message-log::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+.spinner {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}
+.jiggle {
+    display: inline-block;
+    animation: jiggle 0.5s ease-in-out infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+@keyframes jiggle {
+    0%, 100% { transform: translateX(-2px) rotate(-1deg); }
+    50% { transform: translateX(2px) rotate(1deg); }
+}
+/* Styles for new modals */
+.shop-item, .contraption-item {
+    border: 1px solid #e2e8f0;
+    transition: box-shadow 0.2s;
+}
+.shop-item:hover, .contraption-item:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+.relic-slot, .relic-item {
+    border: 2px dashed #cbd5e1;
+    min-height: 80px;
+}
+.relic-item {
+    cursor: grab;
+    border-style: solid;
+}
+.relic-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+.drag-over {
+    border-color: #4f46e5;
+    background-color: #e0e7ff;
+}
+/* Ghost element for touch drag */
+.touch-ghost {
+    position: absolute;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.8;
+}
+.item-toast {
+    opacity: 0;
+    transition: opacity 0.5s, transform 0.5s;
+    transform: translateY(20px);
+}
+.item-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+.compendium-item {
+    opacity: 0.3;
+}
+.compendium-item.discovered {
+    opacity: 1;
+}
+.vorpal-effect-display {
+    transition: all 0.3s ease-in-out;
+}
+.sealed-effect-icon {
+    background-color: #e9d5ff;
+    border-radius: 9999px;
+    box-shadow: 0 0 10px #c084fc;
+}
