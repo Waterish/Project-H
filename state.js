@@ -124,3 +124,7 @@ export function isGameActive() {
 export function getIsGameOver() {
     return isGameOver;
 }
+
+export function setPortalDiscovered(hasDiscovered) {
+    gameState.portalDiscovered = hasDiscovered;
+}

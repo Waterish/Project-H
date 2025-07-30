@@ -163,24 +163,69 @@ export function updateUI() {
     document.getElementById('money-stat').textContent = `$${Math.round(state.gameState.money)}`;
     document.getElementById('food-stat').textContent = state.gameState.food;
     document.getElementById('supplies-stat').textContent = state.gameState.supplies;
-    // ... update all other stat displays (ammo, relics, etc.) ...
+    document.getElementById('ammo-stat').textContent = state.gameState.ammo;
+    document.getElementById('relics-stat').textContent = state.gameState.relics;
+    document.getElementById('science-stat').textContent = state.gameState.science;
+    document.getElementById('bubbles-stat').textContent = state.gameState.bubbles;
+    document.getElementById('crystals-stat').textContent = state.gameState.crystals;
 
-    // --- Update Progress Bars ---
-    document.getElementById('energy-bar').style.width = `${state.gameState.energy}%`;
-    document.getElementById('energy-value').textContent = `${Math.round(state.gameState.energy)}/100`;
-    // ... update all other progress bars and value displays ...
+    // --- Update Progress Bars and Values ---
+    const bars = ['energy', 'happiness', 'hunger', 'family', 'friends'];
+    bars.forEach(stat => {
+        const barEl = document.getElementById(`${stat}-bar`);
+        const valueEl = document.getElementById(`${stat}-value`);
+        if (barEl && valueEl) {
+            const value = Math.round(state.gameState[stat]);
+            barEl.style.width = `${value}%`;
+            valueEl.textContent = `${value}/100`;
+        }
+    });
 
     // --- Update Warnings & Statuses ---
     document.getElementById('energy-warning').classList.toggle('hidden', state.gameState.energy > 8);
+    document.getElementById('happiness-warning').classList.toggle('hidden', state.gameState.happiness > 8);
     document.getElementById('hunger-warning').classList.toggle('hidden', state.gameState.hunger > 8);
-    // ... update family/friends status indicators ...
 
     // --- Update Conditional Buttons & Indicators ---
     const showRelicUI = state.gameState.relicsOnHand.length > 0 || state.gameState.hasEverFoundRelic;
     document.getElementById('relic-stat-container').style.display = showRelicUI ? 'flex' : 'none';
     document.getElementById('view-relics-btn').style.display = state.gameState.hasEverFoundRelic ? 'block' : 'none';
     document.getElementById('contraptions-btn').style.display = state.gameState.hasBuiltFirstExperiment ? 'block' : 'none';
-    // ... add all other conditional element visibility logic here ...
+    document.getElementById('portal-btn').style.display = state.gameState.portalDiscovered ? 'block' : 'none';
+}
+
+export function updateUI() {
+    if (state.gameState.money === undefined) return; // Exit if game hasn't started
+
+    // --- Update Stats ---
+    document.getElementById('money-stat').textContent = `$${Math.round(state.gameState.money)}`;
+    document.getElementById('food-stat').textContent = state.gameState.food;
+    document.getElementById('supplies-stat').textContent = state.gameState.supplies;
+    
+    // --- Update Progress Bars and Values ---
+    const bars = ['energy', 'happiness', 'hunger', 'family', 'friends'];
+    bars.forEach(stat => {
+        const barEl = document.getElementById(`${stat}-bar`);
+        const valueEl = document.getElementById(`${stat}-value`);
+        if (barEl && valueEl) {
+            const value = Math.round(state.gameState[stat]);
+            barEl.style.width = `${value}%`;
+            valueEl.textContent = `${value}/100`;
+        }
+    });
+
+    // --- Update Warnings & Statuses ---
+    document.getElementById('energy-warning').classList.toggle('hidden', state.gameState.energy > 8);
+    document.getElementById('happiness-warning').classList.toggle('hidden', state.gameState.happiness > 8);
+    document.getElementById('hunger-warning').classList.toggle('hidden', state.gameState.hunger > 8);
+    
+    // --- Update Conditional Buttons & Indicators ---
+    const showRelicUI = state.gameState.relicsOnHand.length > 0 || state.gameState.hasEverFoundRelic;
+    document.getElementById('relic-stat-container').style.display = showRelicUI ? 'flex' : 'none';
+    document.getElementById('view-relics-btn').style.display = state.gameState.hasEverFoundRelic ? 'block' : 'none';
+    document.getElementById('contraptions-btn').style.display = state.gameState.hasBuiltFirstExperiment ? 'block' : 'none';
+    document.getElementById('portal-btn').style.display = state.gameState.portalDiscovered ? 'block' : 'none';
+    // ... add any other conditional element logic here ...
 }
 
 export function updateSocialStatus(element, value, bonusText, penaltyText) {
