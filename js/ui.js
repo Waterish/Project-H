@@ -159,15 +159,15 @@ export function initGame() {
 export function updateUI() {
     if (!state.gameState.money) return; // Exit if game hasn't started
 
-    // --- Update Stats ---
+    // --- Update Top Stat Displays ---
     document.getElementById('money-stat').textContent = `$${Math.round(state.gameState.money)}`;
     document.getElementById('food-stat').textContent = state.gameState.food;
     document.getElementById('supplies-stat').textContent = state.gameState.supplies;
-    document.getElementById('ammo-stat').textContent = state.gameState.ammo;
-    document.getElementById('relics-stat').textContent = state.gameState.relics;
+    document.getElementById('ammo-stat').textContent = state.gameState.energyBolts;
+    document.getElementById('relic-stat').textContent = state.gameState.relicsOnHand.length;
     document.getElementById('science-stat').textContent = state.gameState.science;
-    document.getElementById('bubbles-stat').textContent = state.gameState.bubbles;
-    document.getElementById('crystals-stat').textContent = state.gameState.crystals;
+    document.getElementById('ether-bubble-stat').textContent = state.gameState.etherBubbles;
+    document.getElementById('life-crystal-stat').textContent = state.gameState.lifeCrystals;
 
     // --- Update Progress Bars and Values ---
     const bars = ['energy', 'happiness', 'hunger', 'family', 'friends'];

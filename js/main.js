@@ -145,20 +145,20 @@ function setupEventListeners() {
     });
 
     // --- Shop Modal ---
-    document.getElementById('close-shop-modal-btn')?.addEventListener('click', () => ui.closeModal(document.getElementById('shop-modal')));
     document.getElementById('shop-buy-food-btn')?.addEventListener('click', () => actions.handleBuy('food'));
     document.getElementById('shop-buy-supplies-btn')?.addEventListener('click', () => actions.handleBuy('supplies'));
     document.getElementById('shop-buy-ammo-btn')?.addEventListener('click', () => actions.handleBuy('ammo'));
     document.getElementById('shop-buy-trashcan-btn')?.addEventListener('click', () => actions.handleBuy('trashcan'));
 
-    // --- Add all other modal close buttons and specific action buttons here ---
-    // Example for a generic close button
-    document.querySelectorAll('[data-close-modal]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const modalId = btn.closest('.modal-class').id; // You'd need a common class on your modals
+    // This one block handles ALL modal close buttons
+    document.querySelectorAll('.modal-close-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const modalId = btn.dataset.modalId;
+        if (modalId) {
             ui.closeModal(document.getElementById(modalId));
-        });
+        }
     });
+});
 
     //Relic List Listener
     document.getElementById('relic-list')?.addEventListener('click', (event) => {
