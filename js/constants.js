@@ -97,7 +97,7 @@ export const VORPAL_COMBO_ORDER = ["Solar Flare", "Tsunami", "Mountain", "Cyclon
 export const defaultState = {
     money: 50, energy: 100, happiness: 80, family: 70, friends: 60, hunger: 100, food: 2, supplies: 1, lifeCrystals: 0, energyBolts: 0, etherBubbles: 0,
     relicsOnHand: [], relicCompendium: [], science: 0, 
-    hasZapper: false, hasVorpalGear: false, hasElementalDischarger: false, hasCompendium: false, hasNeutralizer: false, hasGoldenTrashcan: false,
+    hasZapper: false, hasVorpalGear: false, hasElementalDischarger: false, hasCompendium: false, hasNeutralizer: false, hasTrashcan: false,
     equippedRelics: [null, null, null],
     activeVorpalEffect: { name: "None", description: "" },
     permanentlySealedEffects: [],
@@ -125,21 +125,30 @@ export const SHOP_ITEMS = {
     food: {
         cost: 10,
         gainProperty: 'food',
-        type: 'resource'
+        type: 'resource',
+        displayName: 'Food',
+        description: 'Restores hunger. Helps you stay alive and healthy.'
     },
     supplies: {
         cost: 20,
         gainProperty: 'supplies',
-        type: 'resource'
+        type: 'resource',
+        displayName: 'Supplies',
+        description: 'Basic tools and stuff to take with you on a trip.'
     },
-    ammo: {
+    bolts: {
         cost: 80,
         gainProperty: 'energyBolts',
-        type: 'resource'
+        type: 'resource',
+        displayName: 'Energy Bolts',
+        description: 'Why does the shop sell these? Looks kind of otherworldly.',
+        description2: 'Used to power your Zapper and Elemental Discharger.'
     },
     trashcan: {
         cost: 4000,
-        flagProperty: 'hasGoldenTrashcan',
-        type: 'flag'
+        flagProperty: 'hasTrashcan',
+        type: 'flag',
+        displayName: 'Golden Trashcan',
+        description: 'It seems to hum with recycling power. Will recover used relics over time.'
     }
 };

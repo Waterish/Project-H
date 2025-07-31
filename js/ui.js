@@ -8,8 +8,8 @@ const foodStatEl = document.getElementById('food-stat');
 const suppliesStatEl = document.getElementById('supplies-stat');
 const lifeCrystalStatEl = document.getElementById('life-crystal-stat');
 const lifeCrystalStatContainer = document.getElementById('life-crystal-stat-container');
-const ammoStatEl = document.getElementById('ammo-stat');
-const ammoStatContainer = document.getElementById('ammo-stat-container');
+const ammoStatEl = document.getElementById('bolt-stat');
+const ammoStatContainer = document.getElementById('bolt-stat-container');
 const relicStatEl = document.getElementById('relic-stat');
 const scienceStatEl = document.getElementById('science-stat');
 const relicStatContainer = document.getElementById('relic-stat-container');
@@ -163,7 +163,7 @@ export function updateUI() {
     document.getElementById('money-stat').textContent = `$${Math.round(state.gameState.money)}`;
     document.getElementById('food-stat').textContent = state.gameState.food;
     document.getElementById('supplies-stat').textContent = state.gameState.supplies;
-    document.getElementById('ammo-stat').textContent = state.gameState.energyBolts;
+    document.getElementById('bolt-stat').textContent = state.gameState.energyBolts;
     document.getElementById('relic-stat').textContent = state.gameState.relicsOnHand.length;
     document.getElementById('science-stat').textContent = state.gameState.science;
     document.getElementById('ether-bubble-stat').textContent = state.gameState.etherBubbles;
@@ -192,7 +192,7 @@ export function updateUI() {
     const hasRelics = state.gameState.relicsOnHand.length > 0 || state.gameState.hasEverFoundRelic;
     document.getElementById('relic-stat-container').style.display = hasRelics ? 'flex' : 'none';
     document.getElementById('science-stat-container').style.display = state.gameState.science > 0 || hasRelics ? 'flex' : 'none';
-    document.getElementById('ammo-stat-container').style.display = state.gameState.energyBolts > 0 || state.gameState.hasEverFoundAmmo ? 'flex' : 'none';
+    document.getElementById('bolt-stat-container').style.display = state.gameState.energyBolts > 0 || state.gameState.hasEverFoundAmmo ? 'flex' : 'none';
     document.getElementById('life-crystal-stat-container').style.display = state.gameState.lifeCrystals > 0 || state.gameState.hasEverFoundLifeCrystal ? 'flex' : 'none';
     document.getElementById('ether-bubble-stat-container').style.display = state.gameState.etherBubbles > 0 || state.gameState.hasEverFoundEtherBubble ? 'flex' : 'none';
     document.getElementById('view-relics-btn').style.display = state.gameState.hasEverFoundRelic ? 'block' : 'none';
@@ -252,7 +252,7 @@ export function updateShopModalUI() {
     }
     
     shopTrashcanItem.classList.toggle('hidden', !(state.gameState.relicCompendium.length >= OFFLINE_RELICS.length));
-    if(state.gameState.hasGoldenTrashcan) {
+    if(state.gameState.hasTrashcan) {
         shopBuyTrashcanBtn.disabled = true;
         shopBuyTrashcanBtn.textContent = "Owned";
     } else {
@@ -1064,7 +1064,7 @@ export function resetUI() {
 
     // Hide conditional UI elements
     const conditionalElements = [
-        'ammo-stat-container', 'relic-stat-container', 'science-stat-container',
+        'bolt-stat-container', 'relic-stat-container', 'science-stat-container',
         'ether-bubble-stat-container', 'life-crystal-stat-container', 'vorpal-effect-display',
         'endless-mode-indicator', 'trashcan-indicator', 'portal-btn', 'view-relics-btn',
         'contraptions-btn', 'vorpal-gear-btn', 'compendium-btn'
