@@ -152,27 +152,64 @@ function setupEventListeners() {
 
     // This one block handles ALL modal close buttons
     document.querySelectorAll('.modal-close-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const modalId = btn.dataset.modalId;
-        if (modalId) {
-            ui.closeModal(document.getElementById(modalId));
-        }
+        btn.addEventListener('click', () => {
+            const modalId = btn.dataset.modalId;
+            if (modalId) {
+                ui.closeModal(document.getElementById(modalId));
+            }
+        });
     });
-});
 
-    //Relic List Listener
     document.getElementById('relic-list')?.addEventListener('click', (event) => {
         const target = event.target;
+        if (!target.dataset.relicId) return; // Ignore clicks on non-button areas
+        
         const relicId = parseFloat(target.dataset.relicId);
 
         if (target.matches('.relic-sell-btn')) {
             actions.handleSellRelic(relicId);
-            // The UI and state are updated inside handleSellRelic
+            handleEndOfAction(); // Also good to add here for consistency
         }
 
         if (target.matches('.relic-exp-btn')) {
             actions.handleBuildExperiment(relicId);
+            handleEndOfAction(); // This tells the main UI to update
         }
+    });
+
+    // --- Contraption Modal Buttons ---
+    document.getElementById('build-compendium-btn')?.addEventListener('click', () => {
+        actions.handleBuild('compendium');
+        handleEndOfAction();
+    });
+    document.getElementById('build-vorpal-gear-btn')?.addEventListener('click', () => {
+        actions.handleBuild('vorpalGear');
+        handleEndOfAction();
+    });
+    document.getElementById('build-zapper-btn')?.addEventListener('click', () => {
+        actions.handleBuild('zapper');
+        handleEndOfAction();
+    });
+    document.getElementById('build-elemental-discharger-btn')?.addEventListener('click', () => {
+        actions.handleBuild('elementalDischarger');
+        handleEndOfAction();
+    });
+    document.getElementById('build-neutralizer-btn')?.addEventListener('click', () => {
+        actions.handleBuild('neutralizer');
+        handleEndOfAction();
+    });
+
+    document.getElementById('vorpal-gear-btn')?.addEventListener('click', () => {
+        ui.showVorpalGearModal();
+    });
+
+    document.getElementById('compendium-btn')?.addEventListener('click', () => {
+        ui.showCompendiumModal();
+    });
+
+    document.getElementById('close-vorpal-gear-modal-btn')?.addEventListener('click', () => {
+        ui.closeModal(document.getElementById('vorpal-gear-modal'));
+        handleEndOfAction(); // Save the game after closing
     });
 }
 

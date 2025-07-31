@@ -114,8 +114,32 @@ export const defaultState = {
 };
 
 export const CONTRAPTIONS = {
-    zapper: { cost: { science: 10, money: 200 }, flag: 'hasZapper', log: "Zapper built! You can now fight lesser portal creatures." },
+    compendium: { cost: { science: 1, money: 40 }, flag: 'hasCompendium', log: "Compendium assembled! You can now track your discoveries." },
     vorpalGear: { cost: { science: 5, money: 100 }, flag: 'hasVorpalGear', log: "Vorpal Gear constructed! Now you can equip relics." },
-    // ... add all other contraptions here
+    zapper: { cost: { science: 10, money: 200 }, flag: 'hasZapper', log: "Zapper built! You can now fight lesser portal creatures." },
+    elementalDischarger: { cost: { science: 15, money: 300 }, flag: 'hasElementalDischarger', log: "Elemental Discharger built! You're ready for large threats." },
     neutralizer: { cost: { science: 20, money: 400, lifeCrystals: 3 }, flag: 'hasNeutralizer', log: "The Neutralizer is complete!" }
+};
+
+export const SHOP_ITEMS = {
+    food: {
+        cost: 10,
+        gainProperty: 'food',
+        type: 'resource'
+    },
+    supplies: {
+        cost: 20,
+        gainProperty: 'supplies',
+        type: 'resource'
+    },
+    ammo: {
+        cost: 80,
+        gainProperty: 'energyBolts',
+        type: 'resource'
+    },
+    trashcan: {
+        cost: 4000,
+        flagProperty: 'hasGoldenTrashcan',
+        type: 'flag'
+    }
 };

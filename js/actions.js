@@ -1,9 +1,87 @@
 // js/actions.js
 import * as state from './state.js';
 import * as ui from './ui.js';
-import { VORPAL_EFFECTS, MONSTERS, OFFLINE_RELICS } from './constants.js';
-import { CONTRAPTIONS } from './constants.js';
+import { VORPAL_EFFECTS, MONSTERS, OFFLINE_RELICS, CONTRAPTIONS, SHOP_ITEMS } from './constants.js';
 //import { callGemini, getOfflineJournalEntry } from './api.js'; // Assuming you move API calls to api.js
+
+function getOfflineJournalEntry() {
+    const OFFLINE_JOURNAL_ENTRIES = {
+        lowHunger: "My stomach is rumbling. I need to find something to eat soon.",
+        lowEnergy: "Feeling drained. I should probably sleep or get something to eat soon.",
+        lowHappiness: "All work and no play... I feel so bored. I need to do something fun.",
+        lowSocial: "It's been a while since I've seen my friends or family. Maybe I should reach out.",
+        lowMoney: "My wallet feels light. A little work would probably solve that.",
+        noAmmo: "My weapon is useless without ammo. I should visit the shop.",
+        hasRelicsToExperiment: "These strange relics are piling up. I wonder what would happen if I experimented with one?",
+        hasGearToUse: "This Vorpal Gear is fascinating. I should try equipping some relics to see what happens.",
+        generic: "Just another day. I feel like I should be doing something more... adventurous."
+    };
+    
+    if (state.gameState.hunger < 25) return OFFLINE_JOURNAL_ENTRIES.lowHunger;
+    if (state.gameState.energy < 25) return OFFLINE_JOURNAL_ENTRIES.lowEnergy;
+    if (state.gameState.happiness < 25) return OFFLINE_JOURNAL_ENTRIES.lowHappiness;
+    // ... add the rest of the conditions from your original code ...
+    return OFFLINE_JOURNAL_ENTRIES.generic;
+}
+
+function _handlePortalEvent() {
+    const activeEffects = state.getActiveEffects();
+    const isLucky = activeEffects.some(e => e.name === VORPAL_EFFECTS.Glacier.name);
+
+    const monsterChance = isLucky ? 0.3 : 0.47;
+    const relicChance = isLucky ? 0.6 : 0.47;
+    const eventRoll = Math.random();
+
+    // --- Monster Encounter ---
+    if (eventRoll < monsterChance || state.gameState.friends < 15) {
+        if (!state.gameState.hasEncounteredSifeLim) {
+            state.updateGameState({ energy: -20, happiness: -25 }, {});
+            ui.logMessage("A grotesque creature appears! 'Mwahaha! You're in my domain now. I am SifeLim!'", "monster");
+            ui.openModal(document.getElementById('sifelim-encounter-modal'));
+            state.setHasEncounteredSifeLim(true); // We'll add this setter to state.js
+        } else {
+            // Placeholder for future monster fight logic
+            ui.logMessage("You encountered a lesser monster and escaped.", "monster");
+        }
+
+    // --- Relic Find ---
+    } else if (eventRoll < monsterChance + relicChance) {
+        const doubleRelicChance = isLucky ? 0.3 : 0.1;
+        const relicsToGenerate = (Math.random() < doubleRelicChance) ? 2 : 1;
+        _addRelicToInventory(relicsToGenerate);
+
+    // --- Nothing Found ---
+    } else {
+        ui.logMessage("You find nothing of interest.", "portal");
+    }
+}
+
+function _addRelicToInventory(quantity) {
+    for (let i = 0; i < quantity; i++) {
+        const availableRelics = OFFLINE_RELICS.filter(or => !state.gameState.relicCompendium.some(cr => cr.name === or.name));
+        if (availableRelics.length === 0) {
+            ui.logMessage("You've discovered every known relic!", "system");
+            return;
+        }
+        
+        const newRelicData = availableRelics[Math.floor(Math.random() * availableRelics.length)];
+        
+        // Tell the state to add the relic, and get the result back
+        const createdRelic = state.addRelic(newRelicData); 
+        
+        // NOW, the actions module tells the UI to log the message
+        ui.logMessage(`Found: ${createdRelic.name} (${createdRelic.element})`, "relic");
+    }
+
+    if (!state.gameState.hasEverFoundRelic && quantity > 0) {
+        state.setHasEverFoundRelic(true);
+        ui.openModal(document.getElementById('first-relic-modal'));
+    }
+
+    if (quantity > 0) {
+        ui.showItemToast(`+${quantity} 💎`, 'relic');
+    }
+}
 
 export function handleWork() {
     const activeEffects = state.getActiveEffects();
@@ -36,67 +114,32 @@ export function handleEat() {
     ui.logMessage("You ate a meal and feel full.", "action");
 }
 
-export function handleBuyFood() {
+export function handleBuy(itemName) {
+    const item = SHOP_ITEMS[itemName];
+    if (!item) return; // Exit if item doesn't exist
+
     const modifiers = state.getPurchaseModifiers();
-    const cost = { money: Math.round(10 * modifiers.shop) };
+    const cost = { money: Math.round(item.cost * modifiers.shop) };
 
     if (state.gameState.money < cost.money) {
-        ui.logMessage("You can't afford to buy food.", "warning");
+        ui.logMessage("You can't afford that.", "warning");
         return;
     }
-    
-    const gain = { food: 1 };
-    
-    state.updateGameState(gain);
-    ui.logMessage(`You bought some food for $${cost.money}.`, "action")
-    ui.updateShopModalUI(); 
-}
 
-export function handleBuySupplies() {
-    const modifiers = state.getPurchaseModifiers();
-    const cost = { money: Math.round(20 * modifiers.shop) };
-
-    if (state.gameState.money < cost.money) {
-        ui.logMessage("You can't afford these supplies.", "warning");
-        return;
+    let gain = {};
+    
+    // Handle the purchase based on its type
+    if (item.type === 'resource') {
+        gain[item.gainProperty] = 1;
+        ui.logMessage(`You bought 1 ${itemName} for $${cost.money}.`, "action");
+    } else if (item.type === 'flag') {
+        state.setBuildFlag(item.flagProperty, true);
+        ui.logMessage(`You bought the ${itemName}!`, "action");
     }
-    
-    const gain = { supplies: 1 };
-    
-    state.updateGameState(gain);
-    ui.logMessage(`You bought some supplies for $${cost.money}.`, "action")
-    ui.updateShopModalUI(); 
-}
 
-export function handleBuyAmmo() {
-    const modifiers = state.getPurchaseModifiers();
-    const cost = { money: Math.round(80 * modifiers.shop) };
-
-    if (state.gameState.money < cost.money) {
-        ui.logMessage("You can't afford an Energy Bolt.", "warning");
-        return;
-    }
-    
-    const gain = { ammo: 1 };
-    
-    state.updateGameState(gain);
-    ui.logMessage(`You bought an Energy Bolt for $${cost.money}. Looks like you can use it as ammo.`, "action")
-    ui.updateShopModalUI(); 
-}
-
-export function handleBuyTrashcan() {
-    const modifiers = state.getPurchaseModifiers();
-    const cost = { money: Math.round(4000 * modifiers.shop) };
-
-    if (state.gameState.money < cost.money) {
-        ui.logMessage("You can't afford this strange trashcan. Time to get the family credit card!", "warning");
-        return;
-    }
-    
-    state.gameState.hasGoldenTrashcan = true;
-    state.updateGameState(cost);
-    ui.logMessage(`You bought the Trashcan of Fate! It seems to hum with recycling energy.`, "action")
-    ui.updateShopModalUI(); 
+    // This fixes the bug in your original code where the cost wasn't being passed
+    state.updateGameState(gain, cost);
+    ui.updateShopModalUI();
 }
 
 export function handlePlay() {
@@ -111,7 +154,8 @@ export function handlePlay() {
         return; // Return early if the action can't be performed
     }
 
-    let happinessGain = 25;
+    let happinessGain = 25;// js/actions.js
+
     if (activeEffects.some(e => e.name === VORPAL_EFFECTS.Tsunami.name)) happinessGain *= 3;
     else if (activeEffects.some(e => e.name === VORPAL_EFFECTS['Soothing Tides'].name)) happinessGain *= 2;
     else if (activeEffects.some(e => e.name === VORPAL_EFFECTS['Calm Waters'].name)) happinessGain *= 1.5;
@@ -230,19 +274,21 @@ export function handleBuildExperiment(relicId) {
         return;
     }
 
-    state.gameState.relicsOnHand.splice(relicIndex, 1); // Directly modify state for simplicity here
+    state.gameState.relicsOnHand.splice(relicIndex, 1);
     const scienceGain = Math.floor(Math.random() * 5) + 1;
 
     state.updateGameState({ science: scienceGain }, {});
     let logMsg = `You consumed a relic to advance your research by ${scienceGain} points.`;
     
     if (!state.gameState.hasBuiltFirstExperiment) {
-        state.setHasBuiltFirstExperiment(true);
-        logMsg += " As the relic dust settles, an idea flashes in your mind: schematics for advanced contraptions!";
+        state.setBuildFlag('hasBuiltFirstExperiment', true);
+        logMsg += " The Contraptions workshop is now available!";
     }
     
     ui.logMessage(logMsg, "science");
-    ui.populateRelicModal(); // Refresh the modal UI
+    
+    // Add this line to instantly refresh the modal's content
+    ui.populateRelicModal();
 }
 
 export function handleEtherSeal() {
@@ -265,8 +311,10 @@ export function handleBuild(itemName) {
 
     const modifiers = state.getPurchaseModifiers();
     const finalCost = { ...item.cost };
-    finalCost.money = Math.round(finalCost.money * modifiers.contraption);
-
+    if (finalCost.money) {
+        finalCost.money = Math.round(finalCost.money * modifiers.contraption);
+    }
+    
     // Check if player can afford it
     for (const [resource, amount] of Object.entries(finalCost)) {
         if (state.gameState[resource] < amount) {
@@ -276,14 +324,13 @@ export function handleBuild(itemName) {
     }
 
     state.updateGameState({}, finalCost);
-    state.setBuildFlag(item.flag, true); // A new function in state.js to set boolean flags
+    state.setBuildFlag(item.flag, true);
     ui.logMessage(item.log, "contraption");
 
     if (itemName === 'neutralizer') {
         ui.openModal(document.getElementById('neutralizer-built-modal'));
     }
 
-    // Refresh the contraption modal to show the item as "Owned"
     ui.updateContraptionModalUI();
 }
 

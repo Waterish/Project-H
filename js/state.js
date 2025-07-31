@@ -20,19 +20,30 @@ export function setGameOver(status) {
 }
 
 export function updateGameState(gain, cost) {
+    // --- Calculate new values ---
+    let newEnergy = gameState.energy + (gain.energy || 0) - (cost.energy || 0);
+    let newHappiness = gameState.happiness + (gain.happiness || 0);
+    let newHunger = gameState.hunger + (gain.hunger || 0) - (cost.hunger || 0);
+    let newFamily = gameState.family + (gain.family || 0);
+    let newFriends = gameState.friends + (gain.friends || 0);
+
+    // --- Clamp values between 1 and 100 and update the state ---
+    gameState.energy = Math.max(1, Math.min(100, newEnergy));
+    gameState.happiness = Math.max(1, Math.min(100, newHappiness));
+    gameState.hunger = Math.max(1, Math.min(100, newHunger));
+    gameState.family = Math.max(0, Math.min(100, newFamily)); // Social can be 0
+    gameState.friends = Math.max(0, Math.min(100, newFriends)); // Social can be 0
+
+    // --- Update non-clamped stats ---
     gameState.money += (gain.money || 0) - (cost.money || 0);
-    gameState.energy = Math.max(1, gameState.energy + (gain.energy || 0) - (cost.energy || 0));
-    gameState.happiness = Math.max(1, gameState.happiness + (gain.happiness || 0));
-    gameState.family += (gain.family || 0);
-    gameState.friends += (gain.friends || 0);
     gameState.science += (gain.science || 0) - (cost.science || 0);
-    gameState.hunger = Math.max(1, gameState.hunger + (gain.hunger || 0) - (cost.hunger || 0));
     gameState.supplies += (gain.supplies || 0) - (cost.supplies || 0);
     gameState.energyBolts += (gain.energyBolts || 0) - (cost.energyBolts || 0);
     gameState.lifeCrystals += (gain.lifeCrystals || 0) - (cost.lifeCrystals || 0);
     gameState.etherBubbles += (gain.etherBubbles || 0) - (cost.etherBubbles || 0);
     gameState.food += (gain.food || 0);
 
+    // --- Update flags ---
     if (gain.energyBolts > 0) gameState.hasEverFoundAmmo = true;
     if (gain.etherBubbles > 0) gameState.hasEverFoundEtherBubble = true;
     if (gain.lifeCrystals > 0) gameState.hasEverFoundLifeCrystal = true;
@@ -127,4 +138,29 @@ export function getIsGameOver() {
 
 export function setPortalDiscovered(hasDiscovered) {
     gameState.portalDiscovered = hasDiscovered;
+}
+
+export function setHasEverFoundRelic(hasFound) {
+    gameState.hasEverFoundRelic = hasFound;
+}
+
+export function addRelic(relicData) {
+    const newRelic = { ...relicData, id: Date.now() + Math.random() };
+    gameState.relicsOnHand.push(newRelic);
+    
+    if (!gameState.relicCompendium.some(r => r.name === newRelic.name)) {
+        gameState.relicCompendium.push(newRelic);
+    }
+    
+    return newRelic; // Return the relic that was created
+}
+
+export function setHasEncounteredSifeLim(hasEncountered) {
+    gameState.hasEncounteredSifeLim = hasEncountered;
+}
+
+export function setBuildFlag(flagName, value) {
+    if (gameState.hasOwnProperty(flagName)) {
+        gameState[flagName] = value;
+    }
 }

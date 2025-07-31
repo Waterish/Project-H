@@ -1,5 +1,5 @@
 // js/ui.js
-import { VORPAL_EFFECTS, RELIC_ELEMENTS, OFFLINE_RELICS } from './constants.js';
+import { VORPAL_EFFECTS, RELIC_ELEMENTS, OFFLINE_RELICS, VORPAL_COMBO_ORDER, MONSTERS } from './constants.js';
 import * as state from './state.js';
 
 // --- DOM ELEMENTS ---
@@ -157,7 +157,7 @@ export function initGame() {
 }
 
 export function updateUI() {
-    if (!state.gameState.money) return; // Exit if game hasn't started
+    if (state.gameState.money === undefined) return; // Exit if game hasn't started
 
     // --- Update Top Stat Displays ---
     document.getElementById('money-stat').textContent = `$${Math.round(state.gameState.money)}`;
@@ -185,13 +185,21 @@ export function updateUI() {
     document.getElementById('energy-warning').classList.toggle('hidden', state.gameState.energy > 8);
     document.getElementById('happiness-warning').classList.toggle('hidden', state.gameState.happiness > 8);
     document.getElementById('hunger-warning').classList.toggle('hidden', state.gameState.hunger > 8);
-
-    // --- Update Conditional Buttons & Indicators ---
-    const showRelicUI = state.gameState.relicsOnHand.length > 0 || state.gameState.hasEverFoundRelic;
-    document.getElementById('relic-stat-container').style.display = showRelicUI ? 'flex' : 'none';
+    updateSocialStatus(familyStatusEl, state.gameState.family, '💳 Family Credit!', '💸 Homeless');
+    updateSocialStatus(friendsStatusEl, state.gameState.friends, '✊ Resilience!', '👹 All Alone');
+    
+    // --- Update Conditional Elements Visibility ---
+    const hasRelics = state.gameState.relicsOnHand.length > 0 || state.gameState.hasEverFoundRelic;
+    document.getElementById('relic-stat-container').style.display = hasRelics ? 'flex' : 'none';
+    document.getElementById('science-stat-container').style.display = state.gameState.science > 0 || hasRelics ? 'flex' : 'none';
+    document.getElementById('ammo-stat-container').style.display = state.gameState.energyBolts > 0 || state.gameState.hasEverFoundAmmo ? 'flex' : 'none';
+    document.getElementById('life-crystal-stat-container').style.display = state.gameState.lifeCrystals > 0 || state.gameState.hasEverFoundLifeCrystal ? 'flex' : 'none';
+    document.getElementById('ether-bubble-stat-container').style.display = state.gameState.etherBubbles > 0 || state.gameState.hasEverFoundEtherBubble ? 'flex' : 'none';
     document.getElementById('view-relics-btn').style.display = state.gameState.hasEverFoundRelic ? 'block' : 'none';
     document.getElementById('contraptions-btn').style.display = state.gameState.hasBuiltFirstExperiment ? 'block' : 'none';
     document.getElementById('portal-btn').style.display = state.gameState.portalDiscovered ? 'block' : 'none';
+    document.getElementById('vorpal-gear-btn').style.display = state.gameState.hasVorpalGear ? 'block' : 'none';
+    document.getElementById('compendium-btn').style.display = state.gameState.hasCompendium ? 'block' : 'none';
 }
 
 export function updateSocialStatus(element, value, bonusText, penaltyText) {
@@ -254,8 +262,9 @@ export function updateShopModalUI() {
 }
 
 export function updateContraptionModalUI() {
-    const isInferno = getActiveEffects().some(e => e.name === VORPAL_EFFECTS['Solar Flare'].name);
     const modifiers = state.getPurchaseModifiers();
+    contraptionMoneyDisplay.textContent = Math.round(state.gameState.money);
+    contraptionScienceDisplay.textContent = state.gameState.science;
 
     const updateButtonState = (btn, hasItemFlag, scienceCost, moneyCost) => {
         if (hasItemFlag) {
@@ -263,47 +272,48 @@ export function updateContraptionModalUI() {
             btn.disabled = true;
         } else {
             btn.textContent = 'Build';
-            const discountedMoney = Math.round(moneyCost * discount);
+            // Use the modifier from our getter function
+            const discountedMoney = Math.round(moneyCost * modifiers.contraption);
             btn.disabled = !(state.gameState.science >= scienceCost && state.gameState.money >= discountedMoney);
         }
     };
-    
+
     const updateCostDisplay = (costEl, scienceCost, moneyCost) => {
-        const discountedMoney = Math.round(moneyCost * discount);
-            if (isInferno) {
+        const discountedMoney = Math.round(moneyCost * modifiers.contraption);
+        // Check if a discount is active to display the strikethrough text
+        if (modifiers.contraption < 1) {
             costEl.innerHTML = `${scienceCost} Science, <span class="line-through text-slate-400">$${moneyCost}</span> <span class="text-green-600 font-bold">$${discountedMoney}</span>`;
         } else {
             costEl.textContent = `${scienceCost} Science, $${moneyCost}`;
         }
     };
 
-    updateButtonState(buildCompendiumBtn, state.gameState.hasCompendium, 1, 40 * modifiers.contraption);
-    updateCostDisplay(document.getElementById('compendium-cost-display'), 1, 40 * modifiers.contraption);
+    // Update each contraption with its correct cost
+    updateButtonState(buildCompendiumBtn, state.gameState.hasCompendium, 1, 40);
+    updateCostDisplay(document.getElementById('compendium-cost-display'), 1, 40);
 
-    updateButtonState(buildVorpalGearBtn, state.gameState.hasVorpalGear, 5, 100 * modifiers.contraption);
-    updateCostDisplay(document.getElementById('vorpal-gear-cost-display'), 5, 100 * modifiers.contraption);
+    updateButtonState(buildVorpalGearBtn, state.gameState.hasVorpalGear, 5, 100);
+    updateCostDisplay(document.getElementById('vorpal-gear-cost-display'), 5, 100);
 
-    updateButtonState(buildZapperBtn, state.gameState.hasZapper, 10, 200 * modifiers.contraption);
-    updateCostDisplay(document.getElementById('zapper-cost-display'), 10, 200 * modifiers.contraption);
+    updateButtonState(buildZapperBtn, state.gameState.hasZapper, 10, 200);
+    updateCostDisplay(document.getElementById('zapper-cost-display'), 10, 200);
     
-    updateButtonState(buildElementalDischargerBtn, state.gameState.hasElementalDischarger, 15, 300 * modifiers.contraption);
-    updateCostDisplay(document.getElementById('elemental-discharger-cost-display'), 15, 300 * modifiers.contraption);
+    updateButtonState(buildElementalDischargerBtn, state.gameState.hasElementalDischarger, 15, 300);
+    updateCostDisplay(document.getElementById('elemental-discharger-cost-display'), 15, 300);
 
     // Neutralizer logic
     if (state.gameState.hasNeutralizer) {
         buildNeutralizerBtn.textContent = 'Owned ✅';
         buildNeutralizerBtn.disabled = true;
     } else {
-        buildNeutralizerBtn.textContent = 'Build';
         const moneyCost = 400;
         const scienceCost = 20;
         const crystalCost = 3;
-        const discountedMoney = Math.round(moneyCost * discount);
-        if (isInferno) {
-                neutralizerCostEl.innerHTML = `${scienceCost} Science, <span class="line-through text-slate-400">$${moneyCost}</span> <span class="text-green-600 font-bold">$${discountedMoney}</span>, ${crystalCost} Life Crystals`;
-        } else {
-                neutralizerCostEl.textContent = `${scienceCost} Science, $${moneyCost}, ${crystalCost} Life Crystals`;
-        }
+        const discountedMoney = Math.round(moneyCost * modifiers.contraption);
+        
+        updateCostDisplay(neutralizerCostEl, scienceCost, moneyCost); // This will handle the text display
+        
+        buildNeutralizerBtn.textContent = 'Build';
         buildNeutralizerBtn.disabled = !(state.gameState.science >= scienceCost && state.gameState.money >= discountedMoney && state.gameState.lifeCrystals >= crystalCost);
     }
     
@@ -562,7 +572,6 @@ export function processDrop(relicId, target) {
     calculateVorpalEffects();
     updateVorpalGearModalUI();
     updateUI();
-    saveGame();
 }
 
 export function calculateVorpalEffects() {
@@ -1086,4 +1095,24 @@ export function showGameContainer(isVisible) {
     if (gameContainer) {
         gameContainer.classList.toggle('hidden', !isVisible);
     }
+}
+
+export function showShopModal() {
+    updateShopModalUI();
+    openModal(document.getElementById('shop-modal'));
+}
+
+export function showContraptionModal() {
+    updateContraptionModalUI(); // This function already exists in your file
+    openModal(document.getElementById('contraption-modal'));
+}
+
+export function showVorpalGearModal() {
+    updateVorpalGearModalUI(); // This function should already exist in your file
+    openModal(document.getElementById('vorpal-gear-modal'));
+}
+
+export function showCompendiumModal() {
+    populateCompendiumModal(); // This function should already exist in your file
+    openModal(document.getElementById('compendium-modal'));
 }
