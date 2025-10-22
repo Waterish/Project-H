@@ -1,0 +1,2181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Blast</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden; /* Prevent horizontal scrollbars, allow vertical */
+        }
+        .card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, opacity 0.3s;
+            border-width: 4px;
+            position: relative;
+            user-select: none;
+        }
+        .card:hover:not(.battle-card-on-board) {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem;
+            align-content: start; /* Prevents cards from stretching vertically */
+        }
+        .modal-backdrop {
+            background-color: rgba(0,0,0,0.75);
+        }
+        .modal-content {
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .sort-btn.active {
+            background-color: #06b6d4; /* cyan-600 */
+            color: white;
+        }
+        .battle-card {
+            cursor: pointer;
+        }
+        .battle-card.selected-attacker, .battle-card.selected-guardian {
+             box-shadow: 0 0 15px 5px #f59e0b; /* amber-500 */
+             transform: translateY(-10px) scale(1.05);
+        }
+        .battle-card.valid-target {
+            cursor: crosshair;
+            box-shadow: 0 0 15px 5px #ef4444; /* red-500 */
+        }
+        .battle-card.playable {
+             box-shadow: 0 0 15px 5px #22c55e; /* green-500 */
+        }
+        .battle-card.can-pack-guard {
+            box-shadow: 0 0 15px 5px #a855f7; /* purple-500 */
+        }
+        .card h3 {
+            white-space: normal; /* Allow wrapping */
+            word-break: break-word; /* Break long words */
+            height: 2.5rem; /* Fixed height for 2 lines */
+            line-height: 1.25rem; /* Ensure proper line spacing */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .catalog-grid {
+             display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.5rem;
+        }
+        #coin-flip-container {
+            font-size: 5rem;
+            animation: dropCoin 1s ease-out forwards;
+        }
+        @keyframes dropCoin {
+            0% { transform: translateY(-300px) rotate(0deg); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(0) rotate(1080deg); opacity: 1; }
+        }
+        .stat-btn.active {
+            box-shadow: 0 0 5px 2px #facc15; /* yellow-400 */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+
+    <div id="app" class="container mx-auto p-4 min-h-screen relative">
+        <!-- Header -->
+        <header class="text-center my-6">
+             <div class="absolute top-4 left-4 flex flex-col space-y-2">
+                 <button id="new-game-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-sm">New Game</button>
+                 <button id="save-game-btn" class="bg-green-700 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Save Game</button>
+                 <button id="load-game-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Load Game</button>
+             </div>
+             <div class="absolute top-4 right-4 flex flex-col items-center space-y-2">
+                 <button id="catalog-btn" class="bg-blue-700 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full">Catalog</button>
+                 <button id="rules-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold p-2 rounded-lg text-sm leading-tight text-center w-full">Game Rules</button>
+                 <button id="abilities-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold p-2 rounded-lg text-sm leading-tight text-center w-full">
+                     <div>Card Abilities</div>
+                     <div>✨ 🐾 ⚙️ 👾</div>
+                 </button>
+             </div>
+            <h1 class="text-4xl md:text-5xl font-bold text-cyan-400 pt-8">Card Blast</h1>
+            <p class="text-gray-400 mt-2">Open packs, collect cards, and build your ultimate deck!</p>
+            <div class="mt-6 flex justify-center items-center space-x-2 flex-wrap gap-y-2">
+                 <button id="starter-deck-btn" class="hidden bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 text-sm">
+                    Open Starter Deck
+                 </button>
+                 <button id="begin-battle-btn" class="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                     Begin Battle!
+                 </button>
+                 <div class="flex flex-col items-center">
+                    <button id="open-pack-btn" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+                        Regular Pack (10 Coins)
+                    </button>
+                 </div>
+                 <div class="flex flex-col items-center">
+                    <button id="open-mega-pack-btn" class="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed text-sm" title="Win a Pretty Good battle to unlock!">
+                        Mega Pack (30 Coins)
+                    </button>
+                    <div id="mega-pack-hint" class="text-xs text-gray-400 mt-1 hidden">🔒 Defeat a Pretty Good Opponent</div>
+                 </div>
+                 <div class="flex flex-col items-center">
+                    <button id="open-blast-pack-btn" class="hidden bg-gradient-to-r from-yellow-500 to-red-500 hover:from-yellow-600 hover:to-red-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed text-sm" title="Win a Brutal battle to unlock!">
+                        Blast Pack (50 Coins)
+                    </button>
+                    <div id="blast-pack-hint" class="text-xs text-gray-400 mt-1 hidden">🔒 Defeat a Brutal Opponent</div>
+                 </div>
+                 <div id="coin-info" class="text-lg bg-gray-800 px-4 py-2 rounded-lg">
+                     <span class="font-semibold text-yellow-400">Coins:</span> <span id="coin-count">0</span>
+                 </div>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            <!-- Deck Section -->
+            <section id="deck-section" class="bg-gray-800 p-6 rounded-xl shadow-2xl">
+                 <div class="flex justify-between items-start mb-4 border-b-2 border-cyan-500 pb-2">
+                    <h2 class="text-2xl font-bold">My Deck</h2>
+                     <div id="deck-rarity-counts" class="text-xs text-right">
+                         <div><span class="font-semibold">Cards in Deck:</span> <span id="deck-total-count">0</span>/10</div>
+                         <div><span class="font-semibold">Epics:</span> <span id="deck-epic-count">0</span>/1</div>
+                         <div><span class="font-semibold">Rares:</span> <span id="deck-rare-count">0</span>/2</div>
+                         <div><span class="font-semibold">Uncommons:</span> <span id="deck-uncommon-count">0</span>/4</div>
+                     </div>
+                 </div>
+                 <div class="flex justify-center space-x-2 mb-4">
+                     <button id="deck-sort-rarity-btn" class="sort-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded-lg text-sm">Sort by Rarity</button>
+                     <button id="deck-sort-type-btn" class="sort-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded-lg text-sm">Sort by Type</button>
+                 </div>
+                <div id="deck-cards" class="card-grid h-[51vh] overflow-y-auto p-2">
+                    <!-- Deck cards will be dynamically inserted here -->
+                </div>
+            </section>
+
+            <!-- Collection Section -->
+            <section id="collection-section" class="bg-gray-800 p-6 rounded-xl shadow-2xl">
+                 <div class="flex justify-between items-center mb-4 border-b-2 border-blue-500 pb-2">
+                    <h2 class="text-2xl font-bold">My Collection</h2>
+                     <div class="flex items-center space-x-2">
+                         <button id="sell-cards-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded-lg text-sm">Sell Cards</button>
+                         <div class="text-lg bg-gray-700 px-4 py-1 rounded-lg">
+                             <span class="font-semibold">Total:</span> <span id="collection-count">0</span>
+                         </div>
+                     </div>
+                 </div>
+                 <div class="flex justify-center space-x-2 mb-4">
+                     <button id="sort-rarity-btn" class="sort-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded-lg text-sm">Sort by Rarity</button>
+                     <button id="sort-type-btn" class="sort-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded-lg text-sm">Sort by Type</button>
+                 </div>
+                <div id="collection-cards" class="card-grid h-[55vh] overflow-y-auto p-2">
+                    <!-- Collection cards will be dynamically inserted here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Opponent Selection Modal -->
+    <div id="opponent-modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 m-4 max-w-lg w-full">
+            <h2 class="text-3xl font-bold text-center text-cyan-400 mb-6">Choose Your Opponent</h2>
+            <div class="flex flex-col space-y-4">
+                <button data-difficulty="weak" class="opponent-btn bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg">Weak (Win: +5 Coins)</button>
+                <button data-difficulty="good" class="opponent-btn bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg">Pretty Good (Win: +15 Coins)</button>
+                <button data-difficulty="brutal" class="opponent-btn bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg">Brutal (Win: +40 Coins)</button>
+            </div>
+             <div class="text-center mt-6">
+                 <button id="close-opponent-modal-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">Cancel</button>
+             </div>
+        </div>
+    </div>
+
+    <!-- Battle Modal -->
+    <div id="battle-modal" class="fixed inset-0 z-40 flex-col items-center justify-between hidden bg-gray-900 bg-opacity-95 p-2 sm:p-4">
+        <!-- Opponent's Hand & Stats -->
+        <div class="w-full flex justify-between items-start p-2 bg-gray-800 rounded-lg">
+            <div id="opponent-hand-container" class="w-2/3 flex justify-center items-center gap-2 min-h-[100px]">
+                <!-- Opponent's face-down hand cards -->
+            </div>
+            <div id="opponent-stats" class="text-right w-1/3 space-y-1 text-sm">
+                <h3 class="font-bold text-red-400 text-lg">Opponent</h3>
+                <div>KO: <span id="opponent-kos"></span></div>
+                <div>AT: <span id="opponent-at"></span></div>
+                <div>Deck: <span id="opponent-deck"></span></div>
+            </div>
+        </div>
+    
+        <!-- Opponent's Board -->
+        <div id="opponent-board" class="w-full h-1/4 bg-black bg-opacity-30 rounded-lg p-2 flex justify-center items-center gap-2 border-2 border-red-900"></div>
+    
+        <!-- Middle Area: Log & Actions -->
+        <div class="w-full flex items-center my-2 h-16">
+             <div id="turn-indicator" class="text-center text-xl font-bold text-cyan-400 w-1/4">
+                 <div id="turn-indicator-text"></div>
+                 <div id="forfeit-warning-text" class="text-yellow-400 text-sm font-semibold hidden">Forfeit Warning</div>
+             </div>
+             <div id="battle-log" class="text-center font-semibold text-lg p-2 bg-gray-800 rounded-lg w-1/2">
+                 <span id="battle-log-text"></span>
+                 <div id="coin-flip-container" class="hidden">🪙</div>
+             </div>
+             <div id="player-actions" class="w-1/4 flex flex-col items-center space-y-1">
+                 <button id="pack-guard-confirm-btn" class="hidden bg-purple-600 hover:bg-purple-700 font-bold py-2 px-4 rounded-lg w-32">Pack Guard</button>
+                 <button id="pack-guard-cancel-btn" class="hidden bg-purple-600 hover:bg-purple-700 font-bold py-2 px-4 rounded-lg w-32">Cancel</button>
+                 <button id="deploy-btn" class="hidden bg-blue-600 hover:bg-blue-700 font-bold py-2 px-4 rounded-lg w-32">Deploy</button>
+                 <button id="attack-btn" class="hidden bg-red-600 hover:bg-red-700 font-bold py-2 px-4 rounded-lg w-32 disabled:opacity-50 disabled:cursor-not-allowed">Attack</button>
+                 <button id="end-turn-btn" class="hidden bg-gray-600 hover:bg-gray-700 font-bold py-2 px-4 rounded-lg w-32">End Turn</button>
+             </div>
+        </div>
+    
+        <!-- Player's Board -->
+        <div id="player-board" class="w-full h-1/4 bg-black bg-opacity-30 rounded-lg p-2 flex justify-center items-center gap-2 border-2 border-green-900"></div>
+    
+        <!-- Player's Hand & Stats -->
+        <div class="w-full flex justify-between items-end p-2 bg-gray-800 rounded-lg">
+             <div id="player-stats" class="text-left w-1/3 space-y-1 text-sm">
+                <h3 class="font-bold text-green-400 text-lg">Player</h3>
+                <div>KO: <span id="player-kos"></span></div>
+                <div>AT: <span id="player-at"></span></div>
+                <div>Deck: <span id="player-deck"></span></div>
+            </div>
+            <div id="player-hand-container-parent" class="w-2/3 flex items-center justify-center">
+                <button id="hand-scroll-left" class="hidden mx-2 px-2 py-4 bg-gray-700 rounded-lg">&lt;</button>
+                <div id="player-hand-container" class="flex justify-center items-center gap-2 overflow-hidden">
+                    <!-- Player's hand cards -->
+                </div>
+                <button id="hand-scroll-right" class="hidden mx-2 px-2 py-4 bg-gray-700 rounded-lg">&gt;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pack Opening / Initial Hand Modal -->
+    <div id="pack-modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 m-4 max-w-4xl w-full modal-content">
+            <h2 id="pack-modal-title" class="text-3xl font-bold text-center text-yellow-400 mb-6">Check out what you got!</h2>
+            <div id="new-cards-container" class="flex flex-wrap justify-center gap-6"></div>
+            <div class="text-center mt-8">
+                <button id="close-modal-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-8 rounded-lg">Awesome!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Draw Card Modal -->
+    <div id="draw-card-modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 m-4 max-w-sm w-full text-center">
+            <h2 id="draw-modal-title" class="text-2xl font-bold text-cyan-400 mb-4">You drew a card!</h2>
+            <div id="drawn-card-container" class="flex justify-center mb-4"></div>
+            <p id="draw-modal-at-text" class="text-xl font-semibold text-yellow-400 mb-6">+1 AT ⬆️</p>
+            <button id="close-draw-modal-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-8 rounded-lg">Continue</button>
+        </div>
+    </div>
+
+    <!-- Catalog Modal -->
+    <div id="catalog-modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 m-4 max-w-6xl w-full modal-content">
+             <h2 class="text-3xl font-bold text-center text-cyan-400 mb-6">Card Catalog (<span id="catalog-count">0</span>/80)</h2>
+             <div id="catalog-cards-container" class="catalog-grid h-[70vh] overflow-y-auto p-2"></div>
+             <div class="text-center mt-6">
+                 <button id="close-catalog-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">Close</button>
+             </div>
+        </div>
+    </div>
+    
+    <!-- Abilities Modal -->
+    <div id="abilities-modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 m-4 max-w-2xl w-full modal-content">
+             <h2 class="text-3xl font-bold text-center text-purple-400 mb-6">Card Type Abilities</h2>
+             <div class="space-y-4 text-gray-300">
+                <div>
+                    <h3 class="text-xl font-bold text-cyan-400 flex items-center">✨ Celestial</h3>
+                    <p class="ml-4">Can toggle its attack to target either the opponent's Attack or Defense stat. Damage is always dealt, even if the target stat is higher. Damaged stats turn blue. A card is only defeated if its Defense is reduced to 0.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-cyan-400 flex items-center">🐾 Terrestrial</h3>
+                    <p class="ml-4">Can perform a Pack Attack (select multiple to attack together) or a Pack Guard (select multiple to defend together). Grouped defenders have their Defense combined, but if one is defeated, they all are.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-cyan-400 flex items-center">⚙️ Mechanical</h3>
+                    <p class="ml-4">At the end of your turn, upgrades a stat of your choice by +1. There is a 50% chance both stats get upgraded. The player can choose the preferred stat to upgrade at any time during their turn.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-cyan-400 flex items-center">👾 Digital</h3>
+                    <p class="ml-4">Can redistribute its stats at any time while it's in a ready state. You can pool its total stats (Attack + Defense) into either Attack or Defense, or reset it to normal.</p>
+                </div>
+             </div>
+             <div class="text-center mt-6">
+                 <button id="close-abilities-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">Close</button>
+             </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rules-modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 m-4 max-w-2xl w-full modal-content">
+             <h2 class="text-3xl font-bold text-center text-purple-400 mb-6">Game Rules</h2>
+             <div class="space-y-4 text-gray-300">
+                <div>
+                    <h3 class="text-xl font-bold text-cyan-400">Objective</h3>
+                    <p class="ml-4">Be the first player to defeat 5 of your opponent's cards (get 5 KOs).</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-cyan-400">Battle Flow</h3>
+                    <ol class="ml-4 list-decimal list-inside">
+                        <li>A coin flip decides who goes first.</li>
+                        <li>At the start of your turn, you gain 1 Advancement Token (AT) (max 3) and draw a card.</li>
+                        <li>You can use abilities (like Pack Guard) and then must choose one main action: <strong>Deploy</strong> or <strong>Attack</strong>.</li>
+                        <li><strong>Deploy:</strong> Spend your AT to play cards from your hand. Each card costs 1 AT.</li>
+                        <li><strong>Attack:</strong> Use your ready cards on the board to attack the opponent's cards. Cards cannot attack the turn they are deployed.</li>
+                        <li>After taking your action, use card abilities (like Digital stat changes), then click "End Turn".</li>
+                    </ol>
+                </div>
+                 <div>
+                    <h3 class="text-xl font-bold text-cyan-400">Inactivity</h3>
+                    <p class="ml-4">If you take no action (don't deploy or attack) for one turn, you get a warning. If you are inactive for two turns in a row, you forfeit the match.</p>
+                </div>
+             </div>
+             <div class="text-center mt-6">
+                 <button id="close-rules-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">Close</button>
+             </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert/Confirm Modal -->
+    <div id="alert-modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 m-4 max-w-sm w-full text-center">
+            <p id="alert-message" class="text-lg mb-4"></p>
+            <div id="alert-buttons">
+                <button id="alert-ok-btn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-6 rounded-lg">OK</button>
+            </div>
+            <div id="confirm-buttons" class="hidden space-x-4">
+                 <button id="confirm-yes-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg">Yes</button>
+                 <button id="confirm-no-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">No</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- GAME CONFIG ---
+        const TYPE_SYMBOLS = { Digital: "👾", Celestial: "✨", Terrestrial: "🐾", Mechanical: "⚙️" };
+        const DECK_LIMITS = { Epic: 1, Rare: 2, Uncommon: 4, Common: 10 };
+        const DECK_SIZE = 10;
+        const PACK_COSTS = { standard: 10, mega: 30, blast: 50 };
+        const STARTING_COINS = 30;
+        const SELL_VALUES = { Common: 2, Uncommon: 5, Rare: 12, Epic: 20 };
+        const BATTLE_REWARDS = { weak: 5, good: 15, brutal: 40 };
+        const RARITY_ORDER = { Common: 1, Uncommon: 2, Rare: 3, Epic: 4 };
+        const RARITY_COLORS = { Common: "border-gray-400", Uncommon: "border-green-500", Rare: "border-blue-500", Epic: "border-purple-600" };
+        const BATTLE_HAND_SIZE = 5;
+        const BATTLE_MAX_AT = 3;
+        const BATTLE_WIN_KOS = 5;
+
+
+        const MASTER_CARD_LIST = [
+            // --- COMMONS (32 cards) ---
+            { id: 1, name: "Goblin Grunt", attack: 2, defense: 3, rarity: "Common", type: "Terrestrial", ability: null },
+            { id: 2, name: "Little Dipper", attack: 2, defense: 2, rarity: "Common", type: "Celestial", ability: null },
+            { id: 3, name: "Stone Golem", attack: 1, defense: 5, rarity: "Common", type: "Mechanical", ability: null },
+            { id: 4, name: "Single Bit", attack: 1, defense: 1, rarity: "Common", type: "Digital", ability: null },
+            { id: 5, name: "Forest Sprite", attack: 3, defense: 2, rarity: "Common", type: "Terrestrial", ability: null },
+            { id: 6, name: "Fallen Star", attack: 3, defense: 1, rarity: "Common", type: "Celestial", ability: null },
+            { id: 7, name: "Loose Screw", attack: 2, defense: 1, rarity: "Common", type: "Mechanical", ability: null },
+            { id: 8, name: "Dead Pixel", attack: 0, defense: 2, rarity: "Common", type: "Digital", ability: null },
+            { id: 9, name: "River Serpent", attack: 4, defense: 1, rarity: "Common", type: "Terrestrial", ability: null },
+            { id: 10, name: "Moon Rock", attack: 1, defense: 4, rarity: "Common", type: "Celestial", ability: null },
+            { id: 11, name: "Spare Part", attack: 1, defense: 2, rarity: "Common", type: "Mechanical", ability: null },
+            { id: 12, name: "Glitchy Gremlin", attack: 2, defense: 2, rarity: "Common", type: "Digital", ability: null },
+            { id: 13, name: "Cave Bat", attack: 2, defense: 1, rarity: "Common", type: "Terrestrial", ability: null },
+            { id: 14, name: "Sun Spot", attack: 4, defense: 1, rarity: "Common", type: "Celestial", ability: null },
+            { id: 15, name: "Cogwheel Critter", attack: 3, defense: 2, rarity: "Common", type: "Mechanical", ability: null },
+            { id: 16, name: "Pop-up Ad", attack: 1, defense: 3, rarity: "Common", type: "Digital", ability: null },
+            { id: 17, name: "Wild Boar", attack: 3, defense: 3, rarity: "Common", type: "Terrestrial", ability: null },
+            { id: 18, name: "Space Dust", attack: 1, defense: 2, rarity: "Common", type: "Celestial", ability: null },
+            { id: 19, name: "Rusty Gears", attack: 2, defense: 2, rarity: "Common", type: "Mechanical", ability: null },
+            { id: 20, name: "Loading Bar", attack: 0, defense: 4, rarity: "Common", type: "Digital", ability: null },
+            { id: 21, name: "Scavenger Vulture", attack: 4, defense: 2, rarity: "Common", type: "Terrestrial", ability: null },
+            { id: 22, name: "Distant Planet", attack: 0, defense: 5, rarity: "Common", type: "Celestial", ability: null },
+            { id: 23, name: "Leaky Pipe", attack: 1, defense: 4, rarity: "Common", type: "Mechanical", ability: null },
+            { id: 24, name: "404 Error", attack: 4, defense: 0, rarity: "Common", type: "Digital", ability: null },
+            { id: 25, name: "Desert Fox", attack: 3, defense: 1, rarity: "Common", type: "Terrestrial", ability: null },
+            { id: 26, name: "Asteroid", attack: 3, defense: 2, rarity: "Common", type: "Celestial", ability: null },
+            { id: 27, name: "Short Circuit", attack: 4, defense: 1, rarity: "Common", type: "Mechanical", ability: null },
+            { id: 28, name: "Spam Bot", attack: 3, defense: 1, rarity: "Common", type: "Digital", ability: null },
+            { id: 29, name: "Pack Mule", attack: 1, defense: 5, rarity: "Common", type: "Terrestrial", ability: null },
+            { id: 30, name: "Starlight Wisp", attack: 2, defense: 1, rarity: "Common", type: "Celestial", ability: null },
+            { id: 31, name: "Gear Grinder", attack: 3, defense: 3, rarity: "Common", type: "Mechanical", ability: null },
+            { id: 32, name: "Syntax Error", attack: 2, defense: 3, rarity: "Common", type: "Digital", ability: null },
+            // --- UNCOMMONS (24 cards) ---
+            { id: 33, name: "Elven Archer", attack: 5, defense: 4, rarity: "Uncommon", type: "Terrestrial", ability: null },
+            { id: 34, name: "Shadow Stalker", attack: 7, defense: 3, rarity: "Uncommon", type: "Celestial", ability: null },
+            { id: 35, name: "Scrap Bot", attack: 5, defense: 5, rarity: "Uncommon", type: "Mechanical", ability: null },
+            { id: 36, name: "Lag Spike", attack: 6, defense: 4, rarity: "Uncommon", type: "Digital", ability: null },
+            { id: 37, name: "Dwarven Warrior", attack: 4, defense: 6, rarity: "Uncommon", type: "Terrestrial", ability: null },
+            { id: 38, name: "Comet Chaser", attack: 6, defense: 5, rarity: "Uncommon", type: "Celestial", ability: null },
+            { id: 39, name: "Auto-Turret", attack: 7, defense: 4, rarity: "Uncommon", type: "Mechanical", ability: null },
+            { id: 40, name: "RAM Eater", attack: 5, defense: 5, rarity: "Uncommon", type: "Digital", ability: null },
+            { id: 41, name: "Griffin Rider", attack: 6, defense: 5, rarity: "Uncommon", type: "Terrestrial", ability: null },
+            { id: 42, name: "Star-forged Blade", attack: 8, defense: 3, rarity: "Uncommon", type: "Celestial", ability: null },
+            { id: 43, name: "Gyrocopter", attack: 6, defense: 6, rarity: "Uncommon", type: "Mechanical", ability: null },
+            { id: 44, name: "Pixelated Pixie", attack: 4, defense: 6, rarity: "Uncommon", type: "Digital", ability: null },
+            { id: 45, name: "Canyon Cat", attack: 7, defense: 4, rarity: "Uncommon", type: "Terrestrial", ability: null },
+            { id: 46, name: "Lunar Moth", attack: 5, defense: 6, rarity: "Uncommon", type: "Celestial", ability: null },
+            { id: 47, name: "Welding Drone", attack: 4, defense: 7, rarity: "Uncommon", type: "Mechanical", ability: null },
+            { id: 48, name: "Bit-Streamer", attack: 7, defense: 3, rarity: "Uncommon", type: "Digital", ability: null },
+            { id: 49, name: "Swamp Lurker", attack: 5, defense: 6, rarity: "Uncommon", type: "Terrestrial", ability: null },
+            { id: 50, name: "Cosmic Dust", attack: 4, defense: 7, rarity: "Uncommon", type: "Celestial", ability: null },
+            { id: 51, name: "Assembly Line Bot", attack: 3, defense: 8, rarity: "Uncommon", type: "Mechanical", ability: null },
+            { id: 52, name: "Altered Virus", attack: 3, defense: 7, rarity: "Uncommon", type: "Digital", ability: null },
+            { id: 53, name: "Mountain Goat", attack: 3, defense: 7, rarity: "Uncommon", type: "Terrestrial", ability: null },
+            { id: 54, name: "Gravity Well", attack: 2, defense: 9, rarity: "Uncommon", type: "Celestial", ability: null },
+            { id: 55, name: "Survey Mech", attack: 2, defense: 9, rarity: "Uncommon", type: "Mechanical", ability: null },
+            { id: 56, name: "Corrupted File", attack: 6, defense: 5, rarity: "Uncommon", type: "Digital", ability: null },
+            // --- RARES (16 cards) ---
+            { id: 57, name: "Alpha Wolf", attack: 8, defense: 6, rarity: "Rare", type: "Terrestrial", ability: null },
+            { id: 58, name: "Lunar Shadow Elemental", attack: 7, defense: 8, rarity: "Rare", type: "Celestial", ability: null },
+            { id: 59, name: "Obsidian Guard", attack: 6, defense: 10, rarity: "Rare", type: "Mechanical", ability: null },
+            { id: 60, name: "8-Bit Knight", attack: 7, defense: 7, rarity: "Rare", type: "Digital", ability: null },
+            { id: 61, name: "Grizzly Behemoth", attack: 6, defense: 9, rarity: "Rare", type: "Terrestrial", ability: null },
+            { id: 62, name: "Phoenix", attack: 8, defense: 7, rarity: "Rare", type: "Celestial", ability: null },
+            { id: 63, name: "Clockwork Assassin", attack: 9, defense: 5, rarity: "Rare", type: "Mechanical", ability: null },
+            { id: 64, name: "Data Drake", attack: 8, defense: 6, rarity: "Rare", type: "Digital", ability: null },
+            { id: 65, name: "Jungle Hydra", attack: 9, defense: 7, rarity: "Rare", type: "Terrestrial", ability: null },
+            { id: 66, name: "Stardust Sorcerer", attack: 9, defense: 6, rarity: "Rare", type: "Celestial", ability: null },
+            { id: 67, name: "Steam Juggernaut", attack: 7, defense: 9, rarity: "Rare", type: "Mechanical", ability: null },
+            { id: 68, name: "Voxel Ranger", attack: 9, defense: 5, rarity: "Rare", type: "Digital", ability: null },
+            { id: 69, name: "Mammoth Matriarch", attack: 5, defense: 11, rarity: "Rare", type: "Terrestrial", ability: null },
+            { id: 70, name: "Nebula Griffin", attack: 7, defense: 8, rarity: "Rare", type: "Celestial", ability: null },
+            { id: 71, name: "Tesla Coil Serpent", attack: 8, defense: 7, rarity: "Rare", type: "Mechanical", ability: null },
+            { id: 72, name: "Firewall Sentry", attack: 5, defense: 10, rarity: "Rare", type: "Digital", ability: null },
+            // --- EPICS (8 cards) ---
+            { id: 73, name: "World Turtle", attack: 8, defense: 15, rarity: "Epic", type: "Terrestrial", ability: null },
+            { id: 74, name: "Stellar Dragon", attack: 10, defense: 10, rarity: "Epic", type: "Celestial", ability: null },
+            { id: 75, name: "Omega Fortress", attack: 9, defense: 14, rarity: "Epic", type: "Mechanical", ability: null },
+            { id: 76, name: "Glitch Titan", attack: 11, defense: 11, rarity: "Epic", type: "Digital", ability: null },
+            { id: 77, name: "Gaia's Avatar", attack: 10, defense: 20, rarity: "Epic", type: "Terrestrial", ability: null },
+            { id: 78, name: "Supernova", attack: 15, defense: 10, rarity: "Epic", type: "Celestial", ability: null },
+            { id: 79, name: "Singularity Engine", attack: 12, defense: 12, rarity: "Epic", type: "Mechanical", ability: null },
+            { id: 80, name: "The Mainframe", attack: 13, defense: 13, rarity: "Epic", type: "Digital", ability: null },
+        ];
+
+        // --- DOM ELEMENTS ---
+        const appContainer = document.getElementById('app');
+        const openPackBtn = document.getElementById('open-pack-btn');
+        const openMegaPackBtn = document.getElementById('open-mega-pack-btn');
+        const openBlastPackBtn = document.getElementById('open-blast-pack-btn');
+        const megaPackHint = document.getElementById('mega-pack-hint');
+        const blastPackHint = document.getElementById('blast-pack-hint');
+        const beginBattleBtn = document.getElementById('begin-battle-btn');
+        const starterDeckBtn = document.getElementById('starter-deck-btn');
+        const newGameBtn = document.getElementById('new-game-btn');
+        const saveGameBtn = document.getElementById('save-game-btn');
+        const loadGameBtn = document.getElementById('load-game-btn');
+        const catalogBtn = document.getElementById('catalog-btn');
+        const abilitiesBtn = document.getElementById('abilities-btn');
+        const rulesBtn = document.getElementById('rules-btn');
+        const packModal = document.getElementById('pack-modal');
+        const packModalTitle = document.getElementById('pack-modal-title');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const newCardsContainer = document.getElementById('new-cards-container');
+        const deckCardsContainer = document.getElementById('deck-cards');
+        const collectionCardsContainer = document.getElementById('collection-cards');
+        const deckTotalCountEl = document.getElementById('deck-total-count');
+        const deckEpicCountEl = document.getElementById('deck-epic-count');
+        const deckRareCountEl = document.getElementById('deck-rare-count');
+        const deckUncommonCountEl = document.getElementById('deck-uncommon-count');
+        const collectionCountEl = document.getElementById('collection-count');
+        const coinCountEl = document.getElementById('coin-count');
+        const sellCardsBtn = document.getElementById('sell-cards-btn');
+        const sortTypeBtn = document.getElementById('sort-type-btn');
+        const sortRarityBtn = document.getElementById('sort-rarity-btn');
+        const deckSortTypeBtn = document.getElementById('deck-sort-type-btn');
+        const deckSortRarityBtn = document.getElementById('deck-sort-rarity-btn');
+        const alertModal = document.getElementById('alert-modal');
+        const alertMessage = document.getElementById('alert-message');
+        const alertOkBtn = document.getElementById('alert-ok-btn');
+        const alertButtons = document.getElementById('alert-buttons');
+        const confirmButtons = document.getElementById('confirm-buttons');
+        const confirmYesBtn = document.getElementById('confirm-yes-btn');
+        const confirmNoBtn = document.getElementById('confirm-no-btn');
+        const opponentModal = document.getElementById('opponent-modal');
+        const closeOpponentModalBtn = document.getElementById('close-opponent-modal-btn');
+        const catalogModal = document.getElementById('catalog-modal');
+        const closeCatalogBtn = document.getElementById('close-catalog-btn');
+        const catalogCardsContainer = document.getElementById('catalog-cards-container');
+        const catalogCountEl = document.getElementById('catalog-count');
+        const abilitiesModal = document.getElementById('abilities-modal');
+        const closeAbilitiesBtn = document.getElementById('close-abilities-btn');
+        const rulesModal = document.getElementById('rules-modal');
+        const closeRulesBtn = document.getElementById('close-rules-btn');
+        const drawCardModal = document.getElementById('draw-card-modal');
+        const drawModalTitle = document.getElementById('draw-modal-title');
+        const drawnCardContainer = document.getElementById('drawn-card-container');
+        const drawModalAtText = document.getElementById('draw-modal-at-text');
+        const closeDrawModalBtn = document.getElementById('close-draw-modal-btn');
+
+        // Battle Modal DOM Elements
+        const battleModal = document.getElementById('battle-modal');
+        const opponentKosEl = document.getElementById('opponent-kos');
+        const opponentAtEl = document.getElementById('opponent-at');
+        const opponentDeckEl = document.getElementById('opponent-deck');
+        const playerKosEl = document.getElementById('player-kos');
+        const playerAtEl = document.getElementById('player-at');
+        const playerDeckEl = document.getElementById('player-deck');
+        const turnIndicatorEl = document.getElementById('turn-indicator');
+        const turnIndicatorText = document.getElementById('turn-indicator-text');
+        const forfeitWarningText = document.getElementById('forfeit-warning-text');
+        const opponentBoardEl = document.getElementById('opponent-board');
+        const playerBoardEl = document.getElementById('player-board');
+        const battleLogTextEl = document.getElementById('battle-log-text');
+        const coinFlipContainer = document.getElementById('coin-flip-container');
+        const playerHandContainer = document.getElementById('player-hand-container');
+        const handScrollLeftBtn = document.getElementById('hand-scroll-left');
+        const handScrollRightBtn = document.getElementById('hand-scroll-right');
+        const opponentHandContainer = document.getElementById('opponent-hand-container');
+        const deployBtn = document.getElementById('deploy-btn');
+        const attackBtn = document.getElementById('attack-btn');
+        const endTurnBtn = document.getElementById('end-turn-btn');
+        const packGuardConfirmBtn = document.getElementById('pack-guard-confirm-btn');
+        const packGuardCancelBtn = document.getElementById('pack-guard-cancel-btn');
+
+
+        // --- GAME STATE ---
+        let playerCollection = {}; 
+        let playerDeck = [];
+        let playerStats = {
+            coins: 0,
+            megaPackUnlocked: false,
+            blastPackUnlocked: false,
+            cataloguedCards: {},
+            hasWonGame: false,
+        };
+        let isSellMode = false;
+        let collectionSortOrder = 'rarity';
+        let deckSortOrder = 'rarity';
+        let battleState = {};
+        let handScrollIndex = 0;
+        
+        // --- DATA INITIALIZATION & SYNC ---
+        function initGame() {
+            handleNewGame();
+        }
+        
+        function handleNewGame() {
+            playerCollection = {};
+            playerDeck = [];
+            playerStats = {
+                coins: STARTING_COINS,
+                megaPackUnlocked: false,
+                blastPackUnlocked: false,
+                cataloguedCards: {},
+                hasWonGame: false,
+            };
+            renderAll();
+        }
+
+        function renderAll() {
+            renderCollection();
+            renderDeck();
+            renderStats();
+        }
+
+        function saveGame() {
+            const gameData = {
+                playerCollection,
+                playerDeck,
+                playerStats,
+            };
+            const jsonString = JSON.stringify(gameData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'card_blast_save.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showAlert("Game Saved!");
+        }
+
+        function loadGame() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = readerEvent => {
+                    try {
+                        const content = readerEvent.target.result;
+                        const loadedData = JSON.parse(content);
+                        
+                        // Basic validation
+                        if (loadedData.playerCollection && loadedData.playerDeck && loadedData.playerStats) {
+                            playerCollection = loadedData.playerCollection;
+                            playerDeck = loadedData.playerDeck;
+                            playerStats = loadedData.playerStats;
+                            renderAll();
+                            showAlert("Game Loaded!");
+                        } else {
+                            showAlert("Invalid save file.");
+                        }
+                    } catch (error) {
+                        showAlert("Could not load save file. It may be corrupted.");
+                        console.error("Error loading game:", error);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function getStarterDeck() {
+            if (Object.keys(playerCollection).length > 0) {
+                showAlert("You can only get a starter deck once on a new game!");
+                return;
+            }
+            const commonCards = MASTER_CARD_LIST.filter(c => c.rarity === 'Common');
+            const newCards = [];
+            for(let i=0; i<10; i++){
+                newCards.push(commonCards[Math.floor(Math.random() * commonCards.length)]);
+            }
+
+            const newCollection = { ...playerCollection };
+            const newCatalog = { ...playerStats.cataloguedCards };
+            newCards.forEach(card => {
+                 if (newCollection[card.id]) {
+                     newCollection[card.id].count++;
+                 } else {
+                     newCollection[card.id] = { ...card, count: 1 };
+                 }
+                 newCatalog[card.id] = true;
+            });
+            
+            playerCollection = newCollection;
+            playerStats.cataloguedCards = newCatalog;
+            
+            packModalTitle.textContent = "Starter Deck";
+            showPackModal(newCards, {});
+            renderAll();
+        }
+
+        // --- RENDERING FUNCTIONS ---
+        
+        function createCardElement(cardData, location, state = {}) {
+            const cardEl = document.createElement('div');
+            cardEl.className = `card bg-gray-700 rounded-lg p-3 text-center shadow-md ${RARITY_COLORS[cardData.rarity]} w-24`;
+            
+        
+            if (location.startsWith('battle')) {
+                cardEl.classList.add('battle-card', 'flex', 'flex-col', 'justify-between');
+                if (location === 'battle-board') {
+                    cardEl.classList.add('battle-card-on-board');
+                }
+                if (state.isSelectedAttacker || state.isSelectedGuardian) {
+                    cardEl.classList.add('selected-attacker');
+                }
+                if (state.isValidTarget) {
+                    cardEl.classList.add('valid-target');
+                }
+                 if (state.isPlayable) {
+                    cardEl.classList.add('playable');
+                }
+                if(state.canPackGuard) {
+                    cardEl.classList.add('can-pack-guard');
+                }
+                if (!state.isReady) {
+                    cardEl.classList.add('opacity-50');
+                }
+            }
+
+            let countBadge = '';
+            if (state.count) {
+                countBadge = `<div class="absolute top-1 right-1 bg-cyan-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center border-2 border-gray-700">x${state.count}</div>`;
+            }
+
+            let typeSymbol = '';
+            if (cardData.type && TYPE_SYMBOLS[cardData.type]) {
+                typeSymbol = `<div class="absolute top-1 left-1 text-lg">${TYPE_SYMBOLS[cardData.type]}</div>`;
+            }
+            
+            const attack = cardData.currentAttack ?? cardData.attack;
+            const defense = cardData.currentDefense ?? cardData.defense;
+            
+            let defenseColor;
+            if (cardData.isGuarding) {
+                defenseColor = 'text-purple-400';
+            } else if (cardData.isDamaged) {
+                defenseColor = 'text-blue-400';
+            } else if (cardData.currentDefense > cardData.originalDefense) {
+                defenseColor = 'text-yellow-400';
+            } else {
+                defenseColor = 'text-red-400';
+            }
+
+            let attackColor;
+            if (cardData.isAttackDamaged) {
+                attackColor = 'text-blue-400';
+            } else if (cardData.currentAttack > cardData.originalAttack) {
+                attackColor = 'text-yellow-400';
+            } else {
+                attackColor = 'text-green-400';
+            }
+            
+            const displayedAttack = attack < 0 ? 0 : attack;
+            const displayedDefense = defense < 0 ? 0 : defense;
+            let attackDisplay = `<span class="${attackColor}">${displayedAttack}</span>`;
+            const defenseDisplay = `<span class="${defenseColor}">${displayedDefense}</span>`;
+
+
+            let abilityContent = `<div></div>`; 
+            
+            if (location === 'battle-board' && state.isPlayerCard) {
+                const isReady = state.isReady;
+                
+                if (cardData.type === 'Digital' && isReady) {
+                    if (cardData.isLocked && cardData.isAtkError) {
+                        abilityContent = `<div class="text-xs text-orange-400 font-bold leading-tight">Reprogram</div><div class="text-red-500 font-bold text-xs mt-1">ATK ERROR</div>`;
+                    } else if (cardData.isLocked) {
+                        abilityContent = `<div class="text-xs text-orange-400 font-bold leading-tight">Reprogram</div><div class="text-red-500 font-bold text-xs mt-1">DEF ERROR</div>`;
+                    } else {
+                        const totalStats = cardData.originalAttack + cardData.originalDefense;
+                        const damageTaken = totalStats - (cardData.currentAttack + cardData.currentDefense);
+                        const isAttackMode = cardData.currentAttack === totalStats - damageTaken;
+                        const isDefenseMode = cardData.currentDefense === totalStats - damageTaken;
+                        abilityContent = `
+                            <div class="text-xs text-orange-400 font-bold leading-tight">Reprogram</div>
+                            <div class="digital-controls flex justify-around mt-1">
+                                <button class="stat-btn text-xs bg-green-700 rounded-full h-4 w-4 leading-none ${isAttackMode ? 'active' : ''}" title="Pool into Attack">A</button>
+                                <button class="stat-btn text-xs bg-gray-500 rounded-full h-4 w-4 leading-none ${!isAttackMode && !isDefenseMode ? 'active' : ''}" title="Reset to Normal">N</button>
+                                <button class="stat-btn text-xs bg-red-700 rounded-full h-4 w-4 leading-none ${isDefenseMode ? 'active' : ''}" title="Pool into Defense">D</button>
+                            </div>`;
+                    }
+                } else if (cardData.type === 'Celestial' && isReady) {
+                     abilityContent = `
+                        <div class="text-xs text-orange-400 font-bold leading-tight">Targeting</div>
+                        <div class="celestial-controls flex justify-around mt-1">
+                            <button class="stat-btn text-xs bg-blue-800 rounded-full h-4 w-4 leading-none ${cardData.celestialTarget === 'attack' ? 'active' : ''}" title="Target Attack">A</button>
+                            <button class="stat-btn text-xs bg-blue-800 rounded-full h-4 w-4 leading-none ${cardData.celestialTarget === 'defense' ? 'active' : ''}" title="Target Defense">D</button>
+                        </div>`;
+                } else if (cardData.type === 'Mechanical') {
+                     abilityContent = `
+                        <div class="text-xs text-orange-400 font-bold leading-tight">Upgrade</div>
+                        <div class="mechanical-controls flex justify-around mt-1">
+                            <button class="stat-btn text-xs bg-yellow-700 rounded-full h-4 w-4 leading-none ${cardData.upgradePreference === 'attack' ? 'active' : ''}" title="Prefer Attack">A</button>
+                            <button class="stat-btn text-xs bg-yellow-700 rounded-full h-4 w-4 leading-none ${cardData.upgradePreference === 'defense' ? 'active' : ''}" title="Prefer Defense">D</button>
+                        </div>`;
+                }
+            }
+
+            let lowerAbilityContent = ``;
+            if (location === 'battle-board' && state.isPlayerCard && cardData.type === 'Terrestrial' && state.isReady && battleState.currentPlayer === 'player' && battleState.phase !== 'attack' && battleState.player.board.filter(c => c.type === 'Terrestrial' && c.isReady).length >= 2) {
+                 lowerAbilityContent += `<button class="pack-guard-init-btn text-xs bg-purple-600 rounded px-1 py-0.5 mt-1">Pack</button>`;
+            } else if (location === 'battle-board' && state.isPlayerCard && cardData.type === 'Terrestrial' && state.isReady && battleState.currentPlayer === 'player' && battleState.phase === 'attack' && battleState.player.board.filter(c => c.type === 'Terrestrial' && c.isReady).length >= 2) {
+                lowerAbilityContent += `<div class="text-xs bg-yellow-500 rounded px-1 py-0.5 mt-1 cursor-default">Pack</div>`;
+            }
+
+            cardEl.innerHTML = `
+                <div>
+                    ${countBadge}
+                    ${typeSymbol}
+                    <h3 class="font-bold text-xs pt-4">${cardData.name}</h3>
+                    <div class="mt-1 text-sm font-semibold flex justify-around">
+                        ${attackDisplay}
+                        ${defenseDisplay}
+                    </div>
+                </div>
+                <div class="h-8 flex flex-col justify-center">
+                    ${abilityContent}
+                    ${lowerAbilityContent}
+                </div>
+            `;
+            
+            if (location === 'battle-board' && battleState.currentPlayer === 'player') {
+                if (cardData.type === 'Digital' && state.isReady && !cardData.isLocked) {
+                    const controls = cardEl.querySelector('.digital-controls');
+                    if (controls) {
+                        controls.children[0].onclick = (e) => { e.stopPropagation(); redistributeDigitalStats(cardData.instanceId, 'attack'); };
+                        controls.children[1].onclick = (e) => { e.stopPropagation(); redistributeDigitalStats(cardData.instanceId, 'normal'); };
+                        controls.children[2].onclick = (e) => { e.stopPropagation(); redistributeDigitalStats(cardData.instanceId, 'defense'); };
+                    }
+                } else if (cardData.type === 'Celestial' && state.isReady) {
+                    const controls = cardEl.querySelector('.celestial-controls');
+                    if (controls) {
+                        controls.children[0].onclick = (e) => { e.stopPropagation(); toggleCelestialTarget(cardData.instanceId, 'attack'); };
+                        controls.children[1].onclick = (e) => { e.stopPropagation(); toggleCelestialTarget(cardData.instanceId, 'defense'); };
+                    }
+                } else if (cardData.type === 'Mechanical') {
+                     const controls = cardEl.querySelector('.mechanical-controls');
+                    if (controls) {
+                        controls.children[0].onclick = (e) => { e.stopPropagation(); toggleMechanicalPreference(cardData.instanceId, 'attack'); };
+                        controls.children[1].onclick = (e) => { e.stopPropagation(); toggleMechanicalPreference(cardData.instanceId, 'defense'); };
+                    }
+                }
+
+                if (cardData.type === 'Terrestrial' && state.isReady) {
+                    const guardBtn = cardEl.querySelector('.pack-guard-init-btn');
+                    if(guardBtn) {
+                        guardBtn.onclick = (e) => {
+                             e.stopPropagation();
+                             initiatePackGuard();
+                        }
+                    }
+                }
+            }
+
+            if (location === 'deck' || location === 'collection') {
+                 cardEl.classList.remove('w-24'); // Use grid width for main screen
+                const button = document.createElement('button');
+                button.className = `w-full mt-2 text-xs font-bold py-1 rounded transition`;
+
+                if (location === 'deck') {
+                    button.textContent = "Remove";
+                    button.className += ' bg-red-600 hover:bg-red-700';
+                    button.onclick = (e) => { e.stopPropagation(); removeFromDeck(cardData); };
+                    button.disabled = isSellMode;
+                } else if (location === 'collection') {
+                    const rarity = cardData.rarity;
+                    const currentRarityCountInDeck = playerDeck.filter(card => card.rarity === rarity).length;
+                    const copiesInDeck = playerDeck.filter(c => c.id === cardData.id).length;
+                    const countInCollection = playerCollection[cardData.id]?.count || 0;
+
+                    if (isSellMode) {
+                        const sellValue = SELL_VALUES[cardData.rarity];
+                        button.textContent = `Sell (+${sellValue} Coins)`;
+                        button.className += ' bg-yellow-500 hover:bg-yellow-600';
+
+                        const totalCommonCards = Object.values(playerCollection)
+                            .filter(c => c.rarity === 'Common')
+                            .reduce((sum, card) => sum + card.count, 0);
+
+                        if (cardData.rarity === 'Common' && totalCommonCards <= 10) {
+                            button.disabled = true;
+                            button.textContent = 'Min 10 Commons';
+                            button.className += ' opacity-50 cursor-not-allowed';
+                        } else if (cardData.count <= copiesInDeck) {
+                            button.disabled = true;
+                            button.textContent = 'All In Deck';
+                            button.className += ' opacity-50 cursor-not-allowed';
+                        } else {
+                            button.onclick = (e) => { e.stopPropagation(); sellCard(cardData); };
+                        }
+                    } else { // Not sell mode, add to deck button
+                         if (playerDeck.length >= DECK_SIZE) {
+                            button.textContent = "Deck is Full";
+                            button.className += ' bg-gray-500 cursor-not-allowed';
+                            button.disabled = true;
+                         } else if (rarity !== 'Common' && currentRarityCountInDeck >= DECK_LIMITS[rarity]) {
+                             button.textContent = "Max Reached";
+                             button.className += ' bg-gray-500 cursor-not-allowed';
+                             button.disabled = true;
+                         } else if (countInCollection <= copiesInDeck) {
+                            button.textContent = "All In Deck";
+                            button.className += ' bg-gray-500 cursor-not-allowed';
+                            button.disabled = true;
+                         } else {
+                            button.textContent = "Add to Deck";
+                            button.className += ' bg-green-600 hover:bg-green-700';
+                            button.onclick = (e) => { e.stopPropagation(); addToDeck(cardData); };
+                         }
+                    }
+                }
+                cardEl.appendChild(button);
+            }
+            
+            return cardEl;
+        }
+
+        function renderDeck() {
+            deckCardsContainer.innerHTML = '';
+            let sortedDeck = [...playerDeck];
+
+            if (deckSortOrder === 'rarity') {
+                sortedDeck.sort((a, b) => 
+                    RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity] || 
+                    a.type.localeCompare(b.type) || 
+                    a.id - b.id
+                );
+            } else if (deckSortOrder === 'type') {
+                 sortedDeck.sort((a, b) => 
+                    a.type.localeCompare(b.type) || 
+                    RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity] || 
+                    a.id - b.id
+                );
+            }
+            
+            let counts = { Epic: 0, Rare: 0, Uncommon: 0, Common: 0 };
+            sortedDeck.forEach(card => {
+                counts[card.rarity]++;
+                const cardEl = createCardElement(card, 'deck');
+                deckCardsContainer.appendChild(cardEl);
+            });
+
+            deckTotalCountEl.textContent = playerDeck.length;
+            deckEpicCountEl.textContent = counts.Epic;
+            deckRareCountEl.textContent = counts.Rare;
+            deckUncommonCountEl.textContent = counts.Uncommon;
+
+            beginBattleBtn.disabled = playerDeck.length < DECK_SIZE;
+            
+            updateDeckSortButtons();
+            renderCollection(); // Rerender collection to update "In Deck" status
+        }
+
+        function renderCollection() {
+            collectionCardsContainer.innerHTML = '';
+            let totalCards = 0;
+
+            let sortedCollection = Object.values(playerCollection);
+            if (collectionSortOrder === 'rarity') {
+                sortedCollection.sort((a, b) => 
+                    RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity] || 
+                    a.type.localeCompare(b.type) || 
+                    a.id - b.id
+                );
+            } else if (collectionSortOrder === 'type') {
+                sortedCollection.sort((a, b) => 
+                    a.type.localeCompare(b.type) || 
+                    RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity] || 
+                    a.id - b.id
+                );
+            }
+
+            for (const cardData of sortedCollection) {
+                totalCards += cardData.count;
+                const cardEl = createCardElement(cardData, 'collection', { count: cardData.count });
+                collectionCardsContainer.appendChild(cardEl);
+            }
+            collectionCountEl.textContent = totalCards;
+
+            if (totalCards === 0) {
+                starterDeckBtn.classList.remove('hidden');
+            } else {
+                starterDeckBtn.classList.add('hidden');
+            }
+
+            updateCollectionSortButtons();
+        }
+
+        function renderStats() {
+            coinCountEl.textContent = playerStats.coins;
+            openPackBtn.disabled = playerStats.coins < PACK_COSTS.standard || isSellMode;
+            openMegaPackBtn.disabled = playerStats.coins < PACK_COSTS.mega || isSellMode || !playerStats.megaPackUnlocked;
+            openBlastPackBtn.disabled = playerStats.coins < PACK_COSTS.blast || isSellMode || !playerStats.blastPackUnlocked;
+            
+            megaPackHint.classList.toggle('hidden', playerStats.megaPackUnlocked);
+            
+            if (playerStats.megaPackUnlocked) {
+                openBlastPackBtn.classList.remove('hidden');
+                blastPackHint.classList.toggle('hidden', playerStats.blastPackUnlocked);
+            } else {
+                openBlastPackBtn.classList.add('hidden');
+                blastPackHint.classList.add('hidden');
+            }
+        }
+        
+        // --- GAME LOGIC ---
+        
+        function openPackLogic(packType) {
+            const newCards = [];
+            let rarityWeights;
+
+            if (packType === 'mega') {
+                rarityWeights = { "Common": 40, "Uncommon": 40, "Rare": 15, "Epic": 5 };
+            } else if (packType === 'blast') {
+                rarityWeights = { "Common": 20, "Uncommon": 40, "Rare": 30, "Epic": 10 };
+            } else {
+                rarityWeights = { "Common": 65, "Uncommon": 30, "Rare": 5, "Epic": 0 };
+            }
+            
+            const weightedList = [];
+            MASTER_CARD_LIST.forEach(card => {
+                const weight = rarityWeights[card.rarity];
+                for (let i = 0; i < weight; i++) {
+                    weightedList.push(card);
+                }
+            });
+
+            // Guaranteed card logic
+            if (packType === 'standard') {
+                const allUncommons = MASTER_CARD_LIST.filter(c => c.rarity === 'Uncommon');
+                const missingUncommons = allUncommons.filter(c => !playerStats.cataloguedCards[c.id]);
+                const guaranteedCard = missingUncommons.length > 0
+                    ? missingUncommons[Math.floor(Math.random() * missingUncommons.length)]
+                    : allUncommons[Math.floor(Math.random() * allUncommons.length)];
+                newCards.push(guaranteedCard);
+            } else if (packType === 'mega') {
+                const allRares = MASTER_CARD_LIST.filter(c => c.rarity === 'Rare');
+                const missingRares = allRares.filter(c => !playerStats.cataloguedCards[c.id]);
+                const guaranteedCard = missingRares.length > 0
+                    ? missingRares[Math.floor(Math.random() * missingRares.length)]
+                    : allRares[Math.floor(Math.random() * allRares.length)];
+                newCards.push(guaranteedCard);
+            } else if (packType === 'blast') {
+                const allEpics = MASTER_CARD_LIST.filter(c => c.rarity === 'Epic');
+                const missingEpics = allEpics.filter(c => !playerStats.cataloguedCards[c.id]);
+                const guaranteedCard = missingEpics.length > 0
+                    ? missingEpics[Math.floor(Math.random() * missingEpics.length)]
+                    : allEpics[Math.floor(Math.random() * allEpics.length)];
+                newCards.push(guaranteedCard);
+            }
+
+            // Fill remaining slots
+            while (newCards.length < 3) {
+                const randomIndex = Math.floor(Math.random() * weightedList.length);
+                newCards.push(weightedList[randomIndex]);
+            }
+            return newCards;
+        }
+
+        function handleOpenPack(packType) {
+            const cost = PACK_COSTS[packType];
+            if (playerStats.coins < cost) {
+                showAlert("You don't have enough coins!");
+                return;
+            }
+
+            playerStats.coins -= cost;
+
+            const collectionBeforePack = { ...playerCollection };
+            const newCards = openPackLogic(packType);
+
+            newCards.forEach(card => {
+                if (playerCollection[card.id]) {
+                    playerCollection[card.id].count++;
+                } else {
+                    playerCollection[card.id] = { ...card, count: 1 };
+                }
+                playerStats.cataloguedCards[card.id] = true;
+            });
+            
+            packModalTitle.textContent = "Check out what you got!";
+            showPackModal(newCards, collectionBeforePack);
+            renderAll();
+        }
+
+        function addToDeck(cardToAdd) {
+            if (playerDeck.length >= DECK_SIZE) {
+                showAlert("Your deck is full!");
+                return;
+            }
+
+            const rarity = cardToAdd.rarity;
+            const currentRarityCountInDeck = playerDeck.filter(card => card.rarity === rarity).length;
+            if (rarity !== 'Common' && currentRarityCountInDeck >= DECK_LIMITS[rarity]) {
+                showAlert(`${rarity} card limit reached!`);
+                return;
+            }
+
+            const countInDeck = playerDeck.filter(c => c.id === cardToAdd.id).length;
+            const countInCollection = playerCollection[cardToAdd.id]?.count || 0;
+            if (countInDeck >= countInCollection) {
+                showAlert("You don't have any more copies of this card in your collection.");
+                return;
+            }
+            
+            const newDeckCard = { ...cardToAdd, deckInstanceId: crypto.randomUUID() };
+            playerDeck.push(newDeckCard);
+            renderDeck();
+        }
+
+        function removeFromDeck(cardToRemove) {
+            const indexToRemove = playerDeck.findIndex(card => card.deckInstanceId === cardToRemove.deckInstanceId);
+            if (indexToRemove > -1) {
+                playerDeck.splice(indexToRemove, 1);
+            }
+            renderDeck();
+        }
+
+        function sellCard(cardToSell) {
+             if(cardToSell.rarity === 'Common') {
+                const totalCommonCards = Object.values(playerCollection)
+                    .filter(c => c.rarity === 'Common')
+                    .reduce((sum, card) => sum + card.count, 0);
+                if (totalCommonCards <= 10) {
+                    showAlert("You must keep at least 10 common cards.");
+                    return;
+                }
+             }
+            
+            const copiesInDeck = playerDeck.filter(c => c.id === cardToSell.id).length;
+            if (playerCollection[cardToSell.id]?.count <= copiesInDeck) {
+                showAlert("You can't sell a card that is in your deck if you have no other copies.");
+                return;
+            }
+
+            const sellValue = SELL_VALUES[cardToSell.rarity];
+
+            if (playerCollection[cardToSell.id].count > 1) {
+                playerCollection[cardToSell.id].count--;
+            } else {
+                delete playerCollection[cardToSell.id];
+            }
+            
+            playerStats.coins += sellValue;
+            renderAll();
+        }
+
+        function toggleSellMode() {
+            isSellMode = !isSellMode;
+            sellCardsBtn.textContent = isSellMode ? 'Exit Sell' : 'Sell Cards';
+            sellCardsBtn.classList.toggle('bg-red-600', isSellMode);
+            sellCardsBtn.classList.toggle('hover:bg-red-700', isSellMode);
+            sellCardsBtn.classList.toggle('bg-yellow-600', !isSellMode);
+            sellCardsBtn.classList.toggle('hover:bg-yellow-700', !isSellMode);
+            renderAll();
+        }
+
+        // --- BATTLE LOGIC ---
+
+        function initializeBattleCard(card) {
+            return {
+                ...card,
+                instanceId: crypto.randomUUID(),
+                isReady: false,
+                originalAttack: card.attack,
+                originalDefense: card.defense,
+                currentAttack: card.attack,
+                currentDefense: card.defense,
+                isDamaged: false,
+                isAttackDamaged: false,
+                isLocked: false,
+                isAtkError: false,
+                isGuarding: false,
+                guardGroupId: null,
+                turnDeployed: 0,
+                celestialTarget: 'defense',
+                upgradePreference: 'attack',
+            };
+        }
+
+        function generateOpponentDeck(difficulty) {
+            let deck = [];
+            const epics = MASTER_CARD_LIST.filter(c => c.rarity === 'Epic');
+            const rares = MASTER_CARD_LIST.filter(c => c.rarity === 'Rare');
+            const uncommons = MASTER_CARD_LIST.filter(c => c.rarity === 'Uncommon');
+            const commons = MASTER_CARD_LIST.filter(c => c.rarity === 'Common');
+
+            function getRandom(arr, n) {
+                const result = new Array(n);
+                let len = arr.length;
+                const taken = new Array(len);
+                if (n > len) throw new RangeError("getRandom: more elements taken than available");
+                while (n--) {
+                    const x = Math.floor(Math.random() * len);
+                    result[n] = arr[x in taken ? taken[x] : x];
+                    taken[x] = --len in taken ? taken[len] : len;
+                }
+                return result;
+            }
+            
+            if (difficulty === 'weak') {
+                deck.push(...getRandom(commons, 10));
+            } else if (difficulty === 'good') {
+                deck.push(...getRandom(uncommons, 2));
+                deck.push(...getRandom(commons, 8));
+            } else { // brutal
+                deck.push(...getRandom(epics, DECK_LIMITS.Epic));
+                deck.push(...getRandom(rares, DECK_LIMITS.Rare));
+                deck.push(...getRandom(uncommons, DECK_LIMITS.Uncommon));
+                deck.push(...getRandom(commons, DECK_SIZE - DECK_LIMITS.Epic - DECK_LIMITS.Rare - DECK_LIMITS.Uncommon));
+            }
+            return deck.map(initializeBattleCard);
+        }
+
+        function shuffleDeck(deck) {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+        
+        function startBattle(difficulty) {
+            opponentModal.style.display = 'none';
+            battleModal.style.display = 'flex';
+            appContainer.style.display = 'none';
+            document.body.style.overflow = 'hidden';
+
+            let playerFullDeck = playerDeck.map(initializeBattleCard);
+            let opponentFullDeck = generateOpponentDeck(difficulty);
+
+            shuffleDeck(playerFullDeck);
+            shuffleDeck(opponentFullDeck);
+
+            battleState = {
+                player: { deck: playerFullDeck, hand: [], board: [], kos: 0, at: 0, inactiveTurns: 0 },
+                opponent: { deck: opponentFullDeck, hand: [], board: [], kos: 0, at: 0, inactiveTurns: 0 },
+                currentPlayer: null,
+                turn: 1,
+                phase: 'setup',
+                mode: 'main', // 'main' or 'pack-guard'
+                selectedAttackerIds: [],
+                selectedGuardianIds: [],
+                difficulty: difficulty,
+                actionTakenThisTurn: false,
+                mainActionTaken: false, // 'deploy' or 'attack'
+            };
+            handScrollIndex = 0;
+
+            for(let i=0; i<BATTLE_HAND_SIZE; i++) {
+                if(battleState.player.deck.length > 0) battleState.player.hand.push(battleState.player.deck.pop());
+                if(battleState.opponent.deck.length > 0) battleState.opponent.hand.push(battleState.opponent.deck.pop());
+            }
+
+            // Show initial hand modal
+            packModalTitle.textContent = "Your Starting Hand";
+            showPackModal(battleState.player.hand, null);
+            closeModalBtn.textContent = "Begin Battle!";
+            
+            const beginBattleHandler = () => {
+                hidePackModal();
+                closeModalBtn.textContent = "Awesome!"; // Reset button text
+                
+                // Proceed to coin flip
+                battleLogTextEl.textContent = '';
+                turnIndicatorText.textContent = '';
+                coinFlipContainer.classList.remove('hidden');
+                renderBattleScreen();
+
+                setTimeout(() => {
+                    coinFlipContainer.classList.add('hidden');
+                    const coinFlip = Math.random() < 0.5;
+                    battleState.currentPlayer = coinFlip ? 'player' : 'opponent';
+                    battleLogTextEl.textContent = `${battleState.currentPlayer.toUpperCase()} wins the coin flip!`;
+                    
+                    setTimeout(() => {
+                        startTurn();
+                    }, 1500);
+                }, 1000);
+
+                closeModalBtn.removeEventListener('click', beginBattleHandler);
+                closeModalBtn.addEventListener('click', hidePackModal); // Re-attach original listener
+            };
+            
+            closeModalBtn.removeEventListener('click', hidePackModal);
+            closeModalBtn.addEventListener('click', beginBattleHandler);
+        }
+
+        function startTurn() {
+            battleState.phase = 'main';
+            battleState.mainActionTaken = false;
+            battleState.selectedAttackerIds = [];
+            battleState.selectedGuardianIds = [];
+
+            const activePlayer = battleState[battleState.currentPlayer];
+            
+            forfeitWarningText.classList.toggle('hidden', activePlayer.inactiveTurns !== 1);
+            
+            if (battleState.currentPlayer === 'player') {
+                const guardedCards = activePlayer.board.filter(c => c.isGuarding);
+                const guardGroups = {};
+                guardedCards.forEach(c => {
+                    if (!guardGroups[c.guardGroupId]) guardGroups[c.guardGroupId] = [];
+                    guardGroups[c.guardGroupId].push(c);
+                });
+
+                Object.values(guardGroups).forEach(group => {
+                    const totalPreGuardDefense = group.reduce((sum, c) => sum + c.preGuardDefense, 0);
+                    const damageTakenWhileGuarding = totalPreGuardDefense - group[0].currentDefense;
+
+                    group.forEach(card => {
+                        card.currentDefense = card.preGuardDefense;
+                        card.isDamaged = card.wasDamagedPreGuard;
+                        card.isAttackDamaged = card.wasAttackDamagedPreGuard;
+                        card.isGuarding = false;
+                        card.guardGroupId = null;
+                        delete card.preGuardDefense;
+                        delete card.wasDamagedPreGuard;
+                        delete card.wasAttackDamagedPreGuard;
+                    });
+
+                    if (damageTakenWhileGuarding > 0) {
+                        const damagePerCard = Math.ceil(damageTakenWhileGuarding / group.length);
+                        group.forEach(card => {
+                            card.currentDefense -= damagePerCard;
+                            if (card.currentDefense < 0) card.currentDefense = 0;
+                            card.isDamaged = true; 
+                        });
+                    }
+                });
+            }
+
+            activePlayer.board.forEach(c => c.isReady = true);
+
+            if(activePlayer.at < BATTLE_MAX_AT) {
+                activePlayer.at++;
+            }
+
+            let drawnCard = null;
+            if(activePlayer.deck.length > 0) {
+                drawnCard = activePlayer.deck.pop();
+                activePlayer.hand.push(drawnCard);
+            }
+
+            turnIndicatorText.textContent = `${battleState.currentPlayer.toUpperCase()}'s Turn`;
+            
+            if(battleState.currentPlayer === 'player') {
+                showDrawModal(drawnCard);
+            } else {
+                deployBtn.classList.add('hidden');
+                attackBtn.classList.add('hidden');
+                packGuardConfirmBtn.classList.add('hidden');
+                packGuardCancelBtn.classList.add('hidden');
+                endTurnBtn.classList.add('hidden');
+                battleLogTextEl.textContent = "Opponent is thinking...";
+                setTimeout(opponentTurnLogic, 2000);
+                renderBattleScreen();
+            }
+        }
+
+        function switchTurn() {
+            const previousPlayer = battleState.currentPlayer;
+            const otherPlayer = previousPlayer === 'player' ? 'opponent' : 'player';
+
+            // Apply Mechanical bonus for the turn that just ended
+            const previousPlayerBoard = battleState[previousPlayer].board;
+            previousPlayerBoard.forEach(card => {
+                if (card.type === 'Mechanical' && card.turnDeployed < battleState.turn) {
+                    if (card.upgradePreference === 'attack') {
+                        card.currentAttack++;
+                        if (Math.random() < 0.5) card.currentDefense++;
+                    } else { // defense
+                        card.currentDefense++;
+                        if (Math.random() < 0.5) card.currentAttack++;
+                    }
+                }
+            });
+
+            if (!battleState.actionTakenThisTurn) {
+                battleState[previousPlayer].inactiveTurns++;
+            } else {
+                battleState[previousPlayer].inactiveTurns = 0;
+            }
+
+            if (battleState.player.inactiveTurns >= 1 && battleState.opponent.inactiveTurns >= 1) {
+                endBattle("The match is a tie due to inactivity!");
+                return;
+            }
+
+            if (battleState[previousPlayer].inactiveTurns >= 2) {
+                endBattle(`${previousPlayer.toUpperCase()} forfeits due to inactivity!`);
+                return;
+            }
+            
+            battleState.actionTakenThisTurn = false;
+            battleState.currentPlayer = otherPlayer;
+            
+            if (otherPlayer === 'player') {
+                battleState.turn++;
+            }
+
+            deployBtn.classList.add('hidden');
+            attackBtn.classList.add('hidden');
+            packGuardConfirmBtn.classList.add('hidden');
+            packGuardCancelBtn.classList.add('hidden');
+            endTurnBtn.classList.add('hidden');
+            startTurn();
+        }
+
+        function renderBattleScreen() {
+            // Render Stats
+            const player = battleState.player;
+            const opponent = battleState.opponent;
+
+            playerKosEl.innerHTML = '💥'.repeat(player.kos);
+            playerAtEl.innerHTML = '⬆️'.repeat(player.at) + (player.at === BATTLE_MAX_AT ? '<span class="text-xs font-bold text-yellow-400"> MAX</span>' : '');
+            playerDeckEl.innerHTML = player.deck.length > 0 ? '⬜'.repeat(player.deck.length) : '<span class="text-xs font-bold text-gray-400">Empty</span>';
+
+            opponentKosEl.innerHTML = '💥'.repeat(opponent.kos);
+            opponentAtEl.innerHTML = '⬆️'.repeat(opponent.at) + (opponent.at === BATTLE_MAX_AT ? '<span class="text-xs font-bold text-yellow-400"> MAX</span>' : '');
+            opponentDeckEl.innerHTML = opponent.deck.length > 0 ? '⬜'.repeat(opponent.deck.length) : '<span class="text-xs font-bold text-gray-400">Empty</span>';
+
+            const canPackGuard = battleState.mode === 'main' && player.board.filter(c => c.type === 'Terrestrial' && c.isReady).length >= 2;
+            
+            // Render Boards
+            playerBoardEl.innerHTML = '';
+            player.board.forEach(card => {
+                const cardEl = createCardElement(card, 'battle-board', { 
+                    isPlayerCard: true, // For guard button logic
+                    isSelectedAttacker: card.isReady && battleState.selectedAttackerIds.includes(card.instanceId),
+                    isSelectedGuardian: battleState.mode === 'pack-guard' && battleState.selectedGuardianIds.includes(card.instanceId),
+                    isReady: card.isReady,
+                    canPackGuard: battleState.mode === 'pack-guard' && card.type === 'Terrestrial' && card.isReady,
+                });
+                cardEl.onclick = () => handlePlayerBoardClick(card);
+                playerBoardEl.appendChild(cardEl);
+            });
+
+            opponentBoardEl.innerHTML = '';
+             opponent.board.forEach(card => {
+                const cardEl = createCardElement(card, 'battle-board', {
+                    isPlayerCard: false, // For guard button logic
+                    isValidTarget: battleState.phase === 'attack' && battleState.selectedAttackerIds.length > 0,
+                    isReady: card.isReady,
+                });
+                cardEl.onclick = () => handleOpponentBoardClick(card);
+                opponentBoardEl.appendChild(cardEl);
+            });
+
+            // Render Hands
+            const maxHandVisible = 6;
+            const playerHand = battleState.player.hand;
+            const canScrollLeft = handScrollIndex > 0;
+            const canScrollRight = handScrollIndex + maxHandVisible < playerHand.length;
+            
+            handScrollLeftBtn.classList.toggle('hidden', !canScrollLeft);
+            handScrollRightBtn.classList.toggle('hidden', !canScrollRight);
+            
+            playerHandContainer.innerHTML = '';
+            let sortedHand = [...playerHand];
+            if (deckSortOrder === 'rarity') {
+                sortedHand.sort((a, b) => 
+                    RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity] || a.type.localeCompare(b.type) || a.id - b.id);
+            } else if (deckSortOrder === 'type') {
+                sortedHand.sort((a, b) => 
+                    a.type.localeCompare(b.type) || RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity] || a.id - b.id);
+            }
+            
+            const visibleHand = sortedHand.slice(handScrollIndex, handScrollIndex + maxHandVisible);
+            visibleHand.forEach(card => {
+                const canPlay = battleState.phase === 'deploy' && player.at >= 1;
+                const cardEl = createCardElement(card, 'battle-hand', {isPlayable: canPlay, isReady: true});
+                cardEl.onclick = () => handlePlayerHandClick(card);
+                playerHandContainer.appendChild(cardEl);
+            });
+            
+            opponentHandContainer.innerHTML = '';
+            opponent.hand.forEach((card) => {
+                 const cardEl = document.createElement('div');
+                 cardEl.className = 'card bg-gray-600 rounded-lg w-24 flex items-center justify-center border-2 border-gray-400';
+                 cardEl.innerHTML = `<span class="text-3xl font-bold text-gray-800">?</span>`;
+                 if (battleState.phase === 'attack' && battleState.selectedAttackerIds.length > 0 && opponent.board.length === 0 && opponent.hand.length > 0) {
+                      cardEl.classList.add('battle-card', 'valid-target');
+                      cardEl.onclick = () => handleOpponentHandClick();
+                 }
+                 opponentHandContainer.appendChild(cardEl);
+            });
+        }
+        
+        function handlePlayerActionChoice(phase) {
+            if (battleState.mainActionTaken) return;
+            battleState.phase = phase;
+            battleState.mainActionTaken = true;
+            deployBtn.classList.add('hidden');
+            attackBtn.classList.add('hidden');
+            endTurnBtn.classList.remove('hidden');
+
+            if(phase === 'deploy') {
+                battleLogTextEl.textContent = 'Deploy phase: Play cards from your hand.';
+            } else { // attack
+                const readyAttackers = battleState.player.board.filter(c => c.isReady).length;
+                if(readyAttackers === 0) {
+                     battleLogTextEl.textContent = 'No cards ready to attack.';
+                } else if(battleState.opponent.board.length === 0 && battleState.opponent.hand.length === 0) {
+                     battleLogTextEl.textContent = 'No valid targets to attack.';
+                } else {
+                     battleLogTextEl.textContent = 'Attack phase: Select a ready card to attack.';
+                }
+            }
+            renderBattleScreen();
+        }
+
+        function handlePlayerHandClick(card) {
+            if(battleState.currentPlayer !== 'player' || battleState.phase !== 'deploy') return;
+            if(battleState.player.at < 1) {
+                 battleLogTextEl.textContent = 'Not enough AT to play a card.';
+                 return;
+            }
+
+            battleState.actionTakenThisTurn = true;
+            battleState.player.at--;
+            battleState.player.hand = battleState.player.hand.filter(c => c.instanceId !== card.instanceId);
+            card.isReady = false; // Summoning sickness
+            card.turnDeployed = battleState.turn;
+            battleState.player.board.push(card);
+            battleLogTextEl.textContent = `You deployed ${card.name}.`;
+            renderBattleScreen();
+        }
+
+        function handlePlayerBoardClick(card) {
+            if (battleState.currentPlayer !== 'player' || card.isGuarding) return;
+
+            if (battleState.mode === 'pack-guard') {
+                if (card.type !== 'Terrestrial' || !card.isReady) return;
+                const isSelected = battleState.selectedGuardianIds.includes(card.instanceId);
+                if (isSelected) {
+                    battleState.selectedGuardianIds = battleState.selectedGuardianIds.filter(id => id !== card.instanceId);
+                } else {
+                    battleState.selectedGuardianIds.push(card.instanceId);
+                }
+                packGuardConfirmBtn.classList.toggle('hidden', battleState.selectedGuardianIds.length < 2);
+
+            } else if (battleState.phase === 'attack') {
+                if(!card.isReady) {
+                    battleLogTextEl.textContent = `${card.name} is not ready to attack.`;
+                    return;
+                }
+
+                const { selectedAttackerIds } = battleState;
+                const isSelected = selectedAttackerIds.includes(card.instanceId);
+                const firstSelectedType = selectedAttackerIds.length > 0
+                    ? battleState.player.board.find(c => c.instanceId === selectedAttackerIds[0])?.type
+                    : null;
+
+                if (isSelected) {
+                    battleState.selectedAttackerIds = selectedAttackerIds.filter(id => id !== card.instanceId);
+                } else {
+                    if (card.type === 'Terrestrial' && (firstSelectedType === 'Terrestrial' || firstSelectedType === null)) {
+                        selectedAttackerIds.push(card.instanceId);
+                    } else {
+                        battleState.selectedAttackerIds = [card.instanceId];
+                    }
+                }
+
+                if (battleState.selectedAttackerIds.length > 1) {
+                    battleLogTextEl.innerHTML = `<span class="text-yellow-400">Pack Attack!</span> ${battleState.selectedAttackerIds.length} attackers selected.`;
+                } else if (battleState.selectedAttackerIds.length === 1) {
+                    const singleCard = battleState.player.board.find(c => c.instanceId === battleState.selectedAttackerIds[0]);
+                    battleLogTextEl.textContent = `Selected ${singleCard.name}. Choose a target.`;
+                } else {
+                    battleLogTextEl.textContent = 'Attack cancelled.';
+                }
+            }
+            renderBattleScreen();
+        }
+        
+        function initiatePackGuard() {
+            battleState.mode = 'pack-guard';
+            battleState.selectedGuardianIds = [];
+            battleLogTextEl.textContent = 'Select Terrestrial cards for Pack Guard.';
+            deployBtn.classList.add('hidden');
+            attackBtn.classList.add('hidden');
+            endTurnBtn.classList.add('hidden');
+            packGuardConfirmBtn.classList.remove('hidden');
+            packGuardCancelBtn.classList.remove('hidden');
+            packGuardConfirmBtn.classList.add('hidden'); // Hide until 2 are selected
+            renderBattleScreen();
+        }
+
+        function cancelPackGuard() {
+            battleState.mode = 'main';
+            battleState.selectedGuardianIds = [];
+            packGuardConfirmBtn.classList.add('hidden');
+            packGuardCancelBtn.classList.add('hidden');
+            if (!battleState.mainActionTaken) {
+                deployBtn.classList.remove('hidden');
+                attackBtn.classList.remove('hidden');
+            } else {
+                endTurnBtn.classList.remove('hidden');
+            }
+            attackBtn.disabled = battleState.player.board.filter(c => c.isReady).length === 0;
+            battleLogTextEl.textContent = 'Pack Guard cancelled.';
+            renderBattleScreen();
+        }
+
+        function confirmPackGuard() {
+            const { selectedGuardianIds } = battleState;
+            if (selectedGuardianIds.length < 2) {
+                battleLogTextEl.textContent = "You need to select at least 2 cards for a Pack Guard.";
+                return;
+            }
+
+            const guardians = battleState.player.board.filter(c => selectedGuardianIds.includes(c.instanceId));
+
+            // Store pre-guard state
+            guardians.forEach(card => {
+                card.preGuardDefense = card.currentDefense;
+                card.wasDamagedPreGuard = card.isDamaged;
+                card.wasAttackDamagedPreGuard = card.isAttackDamaged;
+            });
+
+            const totalDefense = guardians.reduce((sum, card) => sum + card.currentDefense, 0);
+            const guardGroupId = crypto.randomUUID();
+
+            guardians.forEach(card => {
+                card.isGuarding = true;
+                card.guardGroupId = guardGroupId;
+                card.currentDefense = totalDefense;
+                card.isReady = false;
+            });
+
+            battleState.actionTakenThisTurn = true;
+            cancelPackGuard(); // Resets UI back to main state
+            battleLogTextEl.textContent = 'Pack Guard formed!';
+            renderBattleScreen();
+        }
+
+        function handleOpponentBoardClick(targetCard) {
+            if(battleState.currentPlayer !== 'player' || battleState.phase !== 'attack' || battleState.selectedAttackerIds.length === 0) return;
+
+            const attackers = battleState.player.board.filter(c => battleState.selectedAttackerIds.includes(c.instanceId));
+            if(attackers.length === 0) return;
+
+            battleState.actionTakenThisTurn = true;
+            
+            const totalAttackPower = attackers.reduce((sum, attacker) => sum + attacker.currentAttack, 0);
+            const attackerNames = attackers.map(c => c.name).join(' & ');
+            const primaryAttacker = attackers[0];
+
+            if (primaryAttacker.type === 'Celestial') {
+                const damageDealt = totalAttackPower;
+                if (primaryAttacker.celestialTarget === 'attack') {
+                    targetCard.currentAttack -= damageDealt;
+                    targetCard.isAttackDamaged = true;
+                    const displayedAttack = targetCard.currentAttack < 0 ? 0 : targetCard.currentAttack;
+                    battleLogTextEl.textContent = `${attackerNames} weakened ${targetCard.name}, reducing its attack to ${displayedAttack}!`;
+
+                    if (targetCard.type === 'Digital' && targetCard.currentDefense === 0 && targetCard.currentAttack < targetCard.originalAttack) {
+                        targetCard.isLocked = true;
+                        targetCard.isAtkError = true;
+                    }
+
+                } else { // Target defense
+                    if (targetCard.isGuarding) {
+                        const guardGroup = battleState.opponent.board.filter(c => c.guardGroupId === targetCard.guardGroupId);
+                        guardGroup.forEach(c => {
+                            c.currentDefense -= damageDealt;
+                            c.isDamaged = true;
+                        });
+                    } else {
+                        targetCard.currentDefense -= damageDealt;
+                        targetCard.isDamaged = true;
+                    }
+                    
+                    const displayedDefense = targetCard.currentDefense < 0 ? 0 : targetCard.currentDefense;
+                    if (targetCard.currentDefense <= 0) {
+                        battleLogTextEl.textContent = `${attackerNames} destroyed ${targetCard.name}!`;
+                    } else {
+                        battleLogTextEl.textContent = `${attackerNames} damaged ${targetCard.name}, reducing its defense to ${displayedDefense}!`;
+                    }
+
+                    if(targetCard.type === 'Digital') {
+                        const wasInDefenseMode = targetCard.currentAttack === 0;
+                        if(wasInDefenseMode && damageDealt >= targetCard.originalDefense) {
+                            targetCard.isLocked = true;
+                        }
+                    }
+                    if(targetCard.currentDefense <= 0) {
+                        setTimeout(() => {
+                            handleCardDefeat(battleState.opponent, targetCard);
+                        }, 800);
+                    }
+                }
+            } else { // Non-celestial attack
+                if(totalAttackPower > targetCard.currentDefense) {
+                    battleLogTextEl.textContent = `${attackerNames} destroyed ${targetCard.name}!`;
+                    handleCardDefeat(battleState.opponent, targetCard);
+                } else {
+                     battleLogTextEl.textContent = `${attackerNames}'s attack on ${targetCard.name} failed.`;
+                }
+            }
+
+            attackers.forEach(attacker => attacker.isReady = false);
+            battleState.selectedAttackerIds = [];
+
+            if (checkBattleWinCondition()) return;
+
+             const remainingAttackers = battleState.player.board.filter(c => c.isReady).length;
+            if (remainingAttackers > 0) {
+                 battleLogTextEl.textContent += ` ${remainingAttackers} attacker(s) left.`;
+            } else {
+                 battleLogTextEl.textContent += ` All attacks finished.`;
+                 battleState.phase = 'main';
+            }
+
+            renderBattleScreen();
+        }
+        
+        function handleCardDefeat(player, defeatedCard) {
+            if (defeatedCard.isGuarding) {
+                const guardGroup = player.board.filter(c => c.guardGroupId === defeatedCard.guardGroupId);
+                player.board = player.board.filter(c => c.guardGroupId !== defeatedCard.guardGroupId);
+                battleState[battleState.currentPlayer].kos += guardGroup.length;
+            } else {
+                player.board = player.board.filter(c => c.instanceId !== defeatedCard.instanceId);
+                battleState[battleState.currentPlayer].kos++;
+            }
+            if (checkBattleWinCondition()) return;
+            renderBattleScreen();
+        }
+
+        function handleOpponentHandClick() {
+            if (battleState.currentPlayer !== 'player' || battleState.phase !== 'attack' || battleState.selectedAttackerIds.length === 0) return;
+
+            const attackers = battleState.player.board.filter(c => battleState.selectedAttackerIds.includes(c.instanceId));
+            if (attackers.length === 0) return;
+
+            battleState.actionTakenThisTurn = true;
+            attackers.forEach(attacker => attacker.isReady = false);
+            battleState.selectedAttackerIds = [];
+            const attackerNames = attackers.map(c => c.name).join(' & ');
+
+            if (battleState.opponent.hand.length > 0) {
+                const randomIndex = Math.floor(Math.random() * battleState.opponent.hand.length);
+                battleState.opponent.hand.splice(randomIndex, 1);
+                battleState.player.kos++;
+                battleLogTextEl.textContent = `${attackerNames} destroyed a random card from the opponent's hand!`;
+            }
+
+            if (checkBattleWinCondition()) return;
+
+            const remainingAttackers = battleState.player.board.filter(c => c.isReady).length;
+            if (remainingAttackers > 0) {
+                battleLogTextEl.textContent += ` ${remainingAttackers} attacker(s) left.`;
+            } else {
+                battleLogTextEl.textContent += ` All attacks finished.`;
+                battleState.phase = 'main';
+            }
+
+            renderBattleScreen();
+        }
+        
+        function redistributeDigitalStats(cardInstanceId, mode) {
+            if (battleState.currentPlayer !== 'player') return;
+            const card = battleState.player.board.find(c => c.instanceId === cardInstanceId);
+            if (!card || !card.isReady || card.isLocked) return;
+
+            battleState.actionTakenThisTurn = true;
+
+            const totalOriginalStats = card.originalAttack + card.originalDefense;
+            const damageTaken = totalOriginalStats - (card.currentAttack + card.currentDefense);
+
+            if (mode === 'attack') {
+                card.currentAttack = totalOriginalStats - damageTaken;
+                card.currentDefense = 0;
+            } else if (mode === 'defense') {
+                card.currentAttack = 0;
+                card.currentDefense = totalOriginalStats - damageTaken;
+            } else { // normal
+                let newDefense = card.originalDefense - damageTaken;
+                let newAttack = card.originalAttack;
+                if (newDefense < 0) {
+                    newAttack += newDefense; // Subtract remaining damage from attack
+                    newDefense = 0;
+                }
+                card.currentAttack = newAttack < 0 ? 0 : newAttack;
+                card.currentDefense = newDefense;
+            }
+            battleLogTextEl.textContent = `${card.name}'s stats have been reprogrammed.`;
+            renderBattleScreen();
+        }
+
+        function toggleCelestialTarget(cardInstanceId, targetType) {
+            if (battleState.currentPlayer !== 'player') return;
+            const card = battleState.player.board.find(c => c.instanceId === cardInstanceId);
+            if (!card || !card.isReady) return;
+            
+            card.celestialTarget = targetType;
+            battleState.actionTakenThisTurn = true; 
+            battleLogTextEl.textContent = `${card.name} will now target ${targetType}.`;
+            renderBattleScreen();
+        }
+
+        function toggleMechanicalPreference(cardInstanceId, preference) {
+            if (battleState.currentPlayer !== 'player') return;
+            const card = battleState.player.board.find(c => c.instanceId === cardInstanceId);
+            if (!card) return;
+
+            card.upgradePreference = preference;
+            battleLogTextEl.textContent = `${card.name} will prefer to upgrade ${preference}.`;
+            renderBattleScreen();
+        }
+
+        function opponentTurnLogic() {
+            const opponent = battleState.opponent;
+            const player = battleState.player;
+            const difficulty = battleState.difficulty;
+            const useAbilityChance = { weak: 0.1, good: 0.4, brutal: 0.75 };
+
+            // --- AI: Pre-turn ability logic ---
+            opponent.board.forEach(card => {
+                if (card.isReady && !card.isLocked) {
+                    if (card.type === 'Digital' && Math.random() < useAbilityChance[difficulty]) {
+                        const totalAttack = card.originalAttack + card.originalDefense;
+                        let canKO = player.board.find(target => totalAttack > target.currentDefense);
+                        if (canKO) {
+                            card.currentAttack = totalAttack;
+                            card.currentDefense = 0;
+                            return;
+                        }
+                        let isThreatened = player.board.find(attacker => attacker.isReady && attacker.currentAttack > card.currentDefense);
+                        if (isThreatened) {
+                            let canSurvive = !player.board.find(attacker => attacker.isReady && attacker.currentAttack > (card.originalAttack + card.originalDefense));
+                            if (canSurvive) {
+                                card.currentAttack = 0;
+                                card.currentDefense = card.originalAttack + card.originalDefense;
+                            }
+                        }
+                    }
+                    if (card.type === 'Mechanical') {
+                         const strongestPlayerCard = player.board.sort((a,b) => b.currentAttack - a.currentAttack)[0];
+                         if (strongestPlayerCard && strongestPlayerCard.currentAttack > card.currentDefense) {
+                             card.upgradePreference = 'defense';
+                         } else {
+                             card.upgradePreference = 'attack';
+                         }
+                    }
+                }
+            });
+
+            const readyAttackers = opponent.board.filter(c => c.isReady);
+            let canDestroy = readyAttackers.some(attacker => 
+                player.board.some(target => attacker.currentAttack > target.currentDefense)
+            );
+
+            if (readyAttackers.some(c => c.currentAttack > 0) && (canDestroy || player.board.length === 0)) {
+                // --- AI: ATTACK PHASE ---
+                battleState.actionTakenThisTurn = true;
+                battleLogTextEl.textContent = 'Opponent is attacking!';
+                
+                setTimeout(() => {
+                    let attackPerformedThisTurn = false;
+                    let availableAttackers = opponent.board.filter(c => c.isReady);
+                    if (checkBattleWinCondition()) return;
+
+                    // 1. AI Pack Attack Logic
+                    const readyTerrestrials = availableAttackers.filter(c => c.type === 'Terrestrial' && c.currentAttack > 0);
+                    if (readyTerrestrials.length > 1 && Math.random() < useAbilityChance[difficulty]) {
+                        const packAttackPower = readyTerrestrials.reduce((sum, c) => sum + c.currentAttack, 0);
+                        let target = player.board.filter(t => packAttackPower > t.currentDefense).sort((a, b) => b.currentAttack - a.currentAttack)[0];
+
+                        if (target) {
+                            attackPerformedThisTurn = true;
+                            battleLogTextEl.textContent = `Opponent's Pack Attack destroys ${target.name}!`;
+                            handleCardDefeat(player, target);
+                            readyTerrestrials.forEach(attacker => {
+                                attacker.isReady = false;
+                                const index = availableAttackers.findIndex(a => a.instanceId === attacker.instanceId);
+                                if (index > -1) availableAttackers.splice(index, 1);
+                            });
+                        }
+                    }
+
+                    // 2. AI Individual Attack Logic
+                    if (!checkBattleWinCondition()) {
+                        availableAttackers.forEach(attacker => {
+                            if (!attacker.isReady || attacker.currentAttack <= 0 || checkBattleWinCondition()) return;
+
+                            let target = null;
+                            let attackSuccessful = false;
+
+                            if (attacker.type === 'Celestial') {
+                                let highAttackPlayerCard = player.board.sort((a, b) => b.currentAttack - a.currentAttack)[0];
+                                if (highAttackPlayerCard && highAttackPlayerCard.currentAttack > 5 && Math.random() < useAbilityChance[difficulty]) {
+                                    attacker.celestialTarget = 'attack';
+                                    target = highAttackPlayerCard;
+                                } else {
+                                    attacker.celestialTarget = 'defense';
+                                    target = player.board.sort((a, b) => b.currentDefense - a.currentDefense)[0];
+                                }
+
+                                if (target) {
+                                    attackSuccessful = true;
+                                    battleLogTextEl.textContent = `Opponent's ${attacker.name} attacks ${target.name}!`;
+                                    if (attacker.celestialTarget === 'attack') {
+                                        target.currentAttack -= attacker.currentAttack;
+                                        target.isAttackDamaged = true;
+                                        if (target.type === 'Digital' && target.currentDefense === 0 && target.currentAttack < target.originalAttack) {
+                                            target.isLocked = true;
+                                            target.isAtkError = true;
+                                        }
+                                    } else {
+                                        target.currentDefense -= attacker.currentAttack;
+                                        target.isDamaged = true;
+                                        if (target.currentDefense <= 0) {
+                                            setTimeout(() => handleCardDefeat(player, target), 500);
+                                        }
+                                    }
+                                }
+                            } else { // Non-Celestial
+                                target = player.board.find(t => attacker.currentAttack > t.currentDefense);
+                                if (target) {
+                                    attackSuccessful = true;
+                                    battleLogTextEl.textContent = `Opponent's ${attacker.name} destroys ${target.name}!`;
+                                    handleCardDefeat(player, target);
+                                }
+                            }
+
+                            if (attackSuccessful) {
+                                attackPerformedThisTurn = true;
+                                attacker.isReady = false;
+                            } else if (player.board.length === 0 && player.hand.length > 0) {
+                                attackPerformedThisTurn = true;
+                                player.hand.pop();
+                                opponent.kos++;
+                                battleLogTextEl.textContent = `Opponent's ${attacker.name} attacks your hand directly!`;
+                                attacker.isReady = false;
+                            }
+                        });
+                    }
+                    
+                    if (checkBattleWinCondition()) return;
+                    
+                    if (attackPerformedThisTurn) {
+                        battleLogTextEl.textContent = "Opponent's attack is over.";
+                        renderBattleScreen();
+                        setTimeout(switchTurn, 2000);
+                    } else {
+                         // Fallback to deploy if attack was planned but couldn't execute
+                         deployOrEndTurn();
+                    }
+                }, 1500);
+            } else {
+                 deployOrEndTurn();
+            }
+
+            function deployOrEndTurn() {
+                if (opponent.at > 0 && opponent.hand.length > 0) {
+                    // --- AI: DEPLOY PHASE ---
+                    battleState.actionTakenThisTurn = true;
+                    battleLogTextEl.textContent = 'Opponent is deploying!';
+                    setTimeout(() => {
+                        while(opponent.at > 0 && opponent.hand.length > 0) {
+                            const cardToPlay = opponent.hand.sort((a,b) => (b.attack + b.defense) - (a.attack + a.defense))[0];
+                            opponent.at--;
+                            opponent.hand = opponent.hand.filter(c => c.instanceId !== cardToPlay.instanceId);
+                            cardToPlay.isReady = false;
+                            cardToPlay.turnDeployed = battleState.turn;
+                            opponent.board.push(cardToPlay);
+                        }
+                        battleLogTextEl.textContent = "Opponent's deployment is over.";
+                        renderBattleScreen();
+                        setTimeout(switchTurn, 2000);
+                    }, 1500);
+                } else {
+                    // CAN'T DO ANYTHING
+                    battleLogTextEl.textContent = 'Opponent takes no action.';
+                    setTimeout(switchTurn, 2000);
+                }
+            }
+        }
+
+        function checkBattleWinCondition() {
+             if (battleState.player.kos >= BATTLE_WIN_KOS) {
+                const reward = BATTLE_REWARDS[battleState.difficulty];
+                playerStats.coins += reward;
+                if (battleState.difficulty === 'good' && !playerStats.megaPackUnlocked) playerStats.megaPackUnlocked = true;
+                if (battleState.difficulty === 'brutal' && !playerStats.blastPackUnlocked) playerStats.blastPackUnlocked = true;
+                endBattle(`You win the match ${battleState.player.kos}-${battleState.opponent.kos}! You earned ${reward} coins.`);
+                return true;
+            }
+            if (battleState.opponent.kos >= BATTLE_WIN_KOS) {
+                endBattle(`You lose the match ${battleState.player.kos}-${battleState.opponent.kos}.`);
+                return true;
+            }
+            return false;
+        }
+
+        function endBattle(message) {
+            setTimeout(() => {
+                showAlert(message);
+                battleModal.style.display = 'none';
+                appContainer.style.display = 'grid';
+                document.body.style.overflow = '';
+                battleState = {}; // Clear state
+                renderStats(); // Update coins on main screen
+            }, 1500);
+        }
+
+        function updateCollectionSortButtons() {
+            document.querySelectorAll('#collection-section .sort-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`sort-${collectionSortOrder}-btn`).classList.add('active');
+        }
+
+        function updateDeckSortButtons() {
+            document.querySelectorAll('#deck-section .sort-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`deck-sort-${deckSortOrder}-btn`).classList.add('active');
+        }
+        
+        function renderCatalog() {
+            catalogCardsContainer.innerHTML = '';
+            let ownedCount = 0;
+            MASTER_CARD_LIST.forEach(card => {
+                const isOwned = !!playerCollection[card.id];
+                const isCatalogued = !!playerStats.cataloguedCards[card.id];
+
+                if (isCatalogued) {
+                    const cardEl = createCardElement(card, 'catalog');
+                    if (!isOwned) {
+                        cardEl.classList.add('opacity-40');
+                    } else {
+                        ownedCount++;
+                    }
+                    catalogCardsContainer.appendChild(cardEl);
+                } else {
+                    const unknownCard = document.createElement('div');
+                    unknownCard.className = 'card bg-gray-900 border-gray-600 rounded-lg p-3 flex items-center justify-center text-4xl font-bold text-gray-500 h-[150px]';
+                    unknownCard.textContent = '???';
+                    catalogCardsContainer.appendChild(unknownCard);
+                }
+            });
+            catalogCountEl.textContent = Object.keys(playerStats.cataloguedCards).length;
+        }
+
+        function checkWinCondition() {
+            if (!playerStats.hasWonGame && Object.keys(playerStats.cataloguedCards).length === 80) {
+                showAlert("Congratulations! You've collected all 80 cards and won the game! Feel free to keep playing and battling.");
+                playerStats.hasWonGame = true;
+            }
+        }
+        
+        // --- UI & MODAL FUNCTIONS ---
+
+        function showPackModal(newCards, collectionBeforePack) {
+            newCardsContainer.innerHTML = '';
+            newCards.forEach(card => {
+                const container = document.createElement('div');
+                container.className = 'relative flex flex-col items-center';
+                const cardEl = createCardElement(card, 'modal');
+                container.appendChild(cardEl);
+
+                if (collectionBeforePack && !collectionBeforePack[card.id]) {
+                    const newBadge = document.createElement('div');
+                    newBadge.className = 'mt-1 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded';
+                    newBadge.textContent = 'NEW!';
+                    container.appendChild(newBadge);
+                }
+                newCardsContainer.appendChild(container);
+            });
+            packModal.style.display = 'flex';
+        }
+
+        function hidePackModal() {
+            packModal.style.display = 'none';
+        }
+
+        function showDrawModal(drawnCard) {
+            drawnCardContainer.innerHTML = '';
+            if(drawnCard) {
+                drawModalTitle.textContent = "You drew a card!";
+                const cardEl = createCardElement(drawnCard, 'modal');
+                drawnCardContainer.appendChild(cardEl);
+                drawModalAtText.classList.remove('hidden');
+            } else {
+                drawModalTitle.textContent = "No cards left to draw!";
+                drawnCardContainer.innerHTML = '<p class="text-gray-400">Your deck is empty.</p>';
+                drawModalAtText.classList.add('hidden');
+            }
+            drawCardModal.style.display = 'flex';
+        }
+
+        function hideDrawModal() {
+            drawCardModal.style.display = 'none';
+            endTurnBtn.classList.add('hidden');
+            deployBtn.classList.remove('hidden');
+            attackBtn.classList.remove('hidden');
+            renderBattleScreen();
+            attackBtn.disabled = battleState.player.board.filter(c => c.isReady).length === 0;
+            battleLogTextEl.textContent = 'Choose your action: Deploy or Attack.';
+        }
+        
+        function showAlert(message) {
+            alertMessage.textContent = message;
+            alertButtons.style.display = 'block';
+            confirmButtons.style.display = 'none';
+            alertModal.style.display = 'flex';
+        }
+
+        function showConfirm(message, onConfirm) {
+            alertMessage.textContent = message;
+            alertButtons.style.display = 'none';
+            confirmButtons.style.display = 'flex';
+            alertModal.style.display = 'flex';
+
+            confirmYesBtn.onclick = () => {
+                hideAlert();
+                onConfirm();
+            };
+        }
+        
+        function hideAlert() {
+            alertModal.style.display = 'none';
+        }
+
+        // --- EVENT LISTENERS ---
+        starterDeckBtn.addEventListener('click', getStarterDeck);
+        openPackBtn.addEventListener('click', () => handleOpenPack('standard'));
+        openMegaPackBtn.addEventListener('click', () => handleOpenPack('mega'));
+        openBlastPackBtn.addEventListener('click', () => handleOpenPack('blast'));
+        closeModalBtn.addEventListener('click', hidePackModal);
+        closeDrawModalBtn.addEventListener('click', hideDrawModal);
+        alertOkBtn.addEventListener('click', hideAlert);
+        confirmNoBtn.addEventListener('click', hideAlert);
+        saveGameBtn.addEventListener('click', saveGame);
+        loadGameBtn.addEventListener('click', loadGame);
+        sellCardsBtn.addEventListener('click', toggleSellMode);
+        newGameBtn.addEventListener('click', () => {
+            showConfirm("Are you sure you want to start a new game? All progress will be lost.", handleNewGame);
+        });
+        beginBattleBtn.addEventListener('click', () => {
+            if (playerDeck.length < DECK_SIZE) {
+                showAlert(`Your deck needs ${DECK_SIZE} cards to battle!`);
+            } else {
+                opponentModal.style.display = 'flex';
+            }
+        });
+        catalogBtn.addEventListener('click', () => {
+            renderCatalog();
+            catalogModal.style.display = 'flex';
+        });
+        closeCatalogBtn.addEventListener('click', () => {
+            catalogModal.style.display = 'none';
+        });
+        abilitiesBtn.addEventListener('click', () => {
+            abilitiesModal.style.display = 'flex';
+        });
+        closeAbilitiesBtn.addEventListener('click', () => {
+            abilitiesModal.style.display = 'none';
+        });
+        rulesBtn.addEventListener('click', () => {
+            rulesModal.style.display = 'flex';
+        });
+        closeRulesBtn.addEventListener('click', () => {
+            rulesModal.style.display = 'none';
+        });
+        closeOpponentModalBtn.addEventListener('click', () => {
+            opponentModal.style.display = 'none';
+        });
+        document.querySelectorAll('.opponent-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                startBattle(e.target.dataset.difficulty);
+            });
+        });
+        packGuardConfirmBtn.addEventListener('click', confirmPackGuard);
+        packGuardCancelBtn.addEventListener('click', cancelPackGuard);
+        deployBtn.addEventListener('click', () => handlePlayerActionChoice('deploy'));
+        attackBtn.addEventListener('click', () => handlePlayerActionChoice('attack'));
+        endTurnBtn.addEventListener('click', () => {
+            if (battleState.currentPlayer === 'player') {
+                switchTurn();
+            }
+        });
+        handScrollLeftBtn.addEventListener('click', () => {
+            if (handScrollIndex > 0) {
+                handScrollIndex--;
+                renderBattleScreen();
+            }
+        });
+        handScrollRightBtn.addEventListener('click', () => {
+            if (handScrollIndex + 6 < battleState.player.hand.length) {
+                handScrollIndex++;
+                renderBattleScreen();
+            }
+        });
+        sortRarityBtn.addEventListener('click', () => { collectionSortOrder = 'rarity'; renderCollection(); });
+        sortTypeBtn.addEventListener('click', () => { collectionSortOrder = 'type'; renderCollection(); });
+        deckSortRarityBtn.addEventListener('click', () => { deckSortOrder = 'rarity'; renderDeck(); });
+        deckSortTypeBtn.addEventListener('click', () => { deckSortOrder = 'type'; renderDeck(); });
+
+        // --- INITIALIZE GAME ---
+        initGame();
+
+    </script>
+</body>
+</html>
+
+
+
+
