@@ -1,0 +1,119 @@
+#:kivy 2.1.0
+
+# Define custom styles for widgets
+<StatBar@ProgressBar>:
+    size_hint_y: None
+    height: '10dp'
+
+<DataLabel@Label>:
+    font_size: '16sp'
+
+<HeaderLabel@Label>:
+    font_size: '20sp'
+    bold: True
+
+<TitleLabel@Label>:
+    font_size: '48sp'
+    font_name: 'Orbitron' # You would need to package this font with your app
+    bold: True
+    color: 0.7, 0.7, 1, 1
+
+<GameWidget>:
+    cols: 1
+    padding: '10dp'
+    spacing: '10dp'
+    action_buttons_widget: action_buttons
+    modal_widget: modal_view
+    
+    # --- HEADER ---
+    BoxLayout:
+        size_hint_y: None
+        height: self.minimum_height
+        orientation: 'vertical'
+        TitleLabel:
+            text: 'SPACE LIFE'
+        BoxLayout:
+            size_hint_y: None
+            height: '30dp'
+            spacing: '20dp'
+            justify_content: 'center'
+            DataLabel:
+                text: root.day_string
+            DataLabel:
+                text: root.time_of_day_string
+            DataLabel:
+                text: root.special_condition_string
+            DataLabel:
+                text: root.inspiration_string
+                opacity: root.inspiration_visible
+    
+    # --- MAIN LAYOUT (Sidebar on right for wider screens) ---
+    GridLayout:
+        cols: 2 if self.width > 900 else 1
+        spacing: '10dp'
+        
+        # --- LEFT/MAIN COLUMN ---
+        BoxLayout:
+            orientation: 'vertical'
+            spacing: '10dp'
+            
+            BoxLayout: # Planet Info
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                HeaderLabel:
+                    text: root.planet_name_string
+                Label:
+                    text: root.planet_desc_string
+                DataLabel:
+                    text: root.base_status_string
+            
+            BoxLayout: # Actions
+                orientation: 'vertical'
+                HeaderLabel:
+                    text: 'Actions'
+                GridLayout:
+                    id: action_buttons
+                    cols: 2
+                    spacing: '10dp'
+                    # Buttons are added dynamically from main.py
+                    
+            BoxLayout: # Log
+                orientation: 'vertical'
+                HeaderLabel:
+                    text: "Ship's Log"
+                ScrollView:
+                    GridLayout:
+                        id: log_layout
+                        cols: 1
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: '5dp'
+                        # This would be populated from root.log_entries
+    
+        # --- RIGHT/SIDEBAR COLUMN ---
+        BoxLayout:
+            orientation: 'vertical'
+            spacing: '10dp'
+            size_hint_x: 0.4 if root.width > 900 else 1.0
+            
+            # Status Blocks
+            GridLayout:
+                cols: 1
+                spacing: '10dp'
+                HeaderLabel:
+                    text: "Your Status"
+                StatBar:
+                    max: root.health_max
+                    value: root.health_value
+                DataLabel:
+                    text: root.health_string
+                # ... other stat bars and labels (Sustenance) ...
+                
+                HeaderLabel:
+                    text: "Starship Status"
+                # ... other stat bars and labels (Fuel, Hull) ...
+
+            # Inventory, Pinned Item, etc. would go here as separate widgets
+            Label:
+                text: "Inventory Would Go Here"
