@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alien Planet Adventure</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
+        }
+        .location-btn, .action-btn, .tab-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .location-btn:hover, .action-btn:hover, .tab-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        #puzzle-modal, #launch-modal, #datapad-modal {
+            transition: opacity 0.3s ease-in-out;
+        }
+        .tab-btn.active {
+            background-color: #0e7490; /* cyan-700 */
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl mx-auto bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
+        <!-- Header -->
+        <div class="text-center border-b border-gray-700 pb-4">
+            <h1 class="text-3xl md:text-4xl font-bold text-cyan-400">Lost on Xylos</h1>
+            <p id="current-location-text" class="text-lg text-gray-400 mt-1">Crash Site</p>
+        </div>
+
+        <!-- Game Display -->
+        <div class="bg-gray-900/50 rounded-lg p-4 md:p-6 min-h-[200px] flex items-center justify-center">
+            <div class="text-center">
+                <p id="game-text" class="text-lg leading-relaxed"></p>
+                <p id="launch-counter-text" class="text-2xl font-bold text-yellow-400 mt-4"></p>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div id="actions-container" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- Action buttons will be dynamically inserted here -->
+        </div>
+        
+        <!-- Navigation -->
+        <div class="border-t border-gray-700 pt-4">
+            <h2 class="text-xl font-semibold text-center mb-4 text-cyan-500">Navigate</h2>
+            <div id="locations-container" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- Location buttons will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <!-- Inventory -->
+        <div class="border-t border-gray-700 pt-4">
+            <div class="flex justify-center items-center gap-4 mb-4">
+                <h2 class="text-xl font-semibold text-cyan-500">Inventory</h2>
+                <div id="datapad-button-container"></div> <!-- Datapad button goes here -->
+            </div>
+            <div id="inventory-container" class="bg-gray-900/50 rounded-lg p-4 min-h-[60px] flex flex-wrap gap-4 justify-center items-center">
+                <p id="empty-inventory-text" class="text-gray-500">Your pockets are empty.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Datapad Modal -->
+    <div id="datapad-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full text-center space-y-4">
+            <h2 class="text-2xl font-bold text-cyan-400">Datapad</h2>
+            <div class="grid grid-cols-2 gap-2">
+                 <button id="scan-button" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg action-btn">Scan Area</button>
+                 <button id="crafting-tab-button" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg action-btn">Crafting</button>
+            </div>
+            <div id="crafting-section" class="hidden">
+                <h3 class="text-xl font-bold text-cyan-400 mt-4">Crafting Schematics</h3>
+                <div id="datapad-tabs" class="flex border-b border-gray-600">
+                    <!-- Recipe tabs go here -->
+                </div>
+                <div class="pt-4">
+                    <p class="text-gray-300">Schematic: <span id="schematic-name" class="font-semibold text-yellow-400"></span></p>
+                    <div id="datapad-ingredients" class="space-y-2 text-left bg-gray-900/50 p-4 rounded-lg my-4">
+                        <!-- Ingredients will be dynamically inserted here -->
+                    </div>
+                    <button id="craft-item-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg action-btn" disabled>Craft</button>
+                </div>
+            </div>
+            <button id="close-datapad-btn" class="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg action-btn mt-2">Close Datapad</button>
+        </div>
+    </div>
+
+    <!-- Puzzle Modal -->
+    <div id="puzzle-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full text-center space-y-6">
+            <h2 class="text-2xl font-bold text-cyan-400">The Monolith's Riddle</h2>
+            <p class="text-gray-300">The carvings on the Monolith pulse with a faint energy. You see three slots, waiting for a sequence. The clues you've found might hold the key.</p>
+            <div class="flex justify-center gap-4">
+                <input type="text" id="puzzle-input-1" class="w-16 h-16 text-4xl text-center bg-gray-700 text-cyan-400 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:outline-none" maxlength="1">
+                <input type="text" id="puzzle-input-2" class="w-16 h-16 text-4xl text-center bg-gray-700 text-cyan-400 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:outline-none" maxlength="1">
+                <input type="text" id="puzzle-input-3" class="w-16 h-16 text-4xl text-center bg-gray-700 text-cyan-400 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:outline-none" maxlength="1">
+            </div>
+            <button id="submit-puzzle-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg action-btn">Activate Sequence</button>
+            <p id="puzzle-feedback" class="text-red-400 h-6"></p>
+            <button id="leave-puzzle-btn" class="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg action-btn mt-4">Leave</button>
+        </div>
+    </div>
+    
+    <script>
+        const gameData = {
+            locations: {
+                crashSite: {
+                    name: "Crash Site",
+                    description: "The wreckage of your ship, the 'Stardust Drifter', is a painful sight. Alarms blare weakly. A diagnostic screen flickers, displaying the critical error: QUANTUM POWER CELL - OFFLINE.",
+                    clue: "Ship's Log: '...power fluctuations are off the charts... primary frequency seems... overloaded. To stabilize... <strong>3</strong> is the final...'",
+                    isLocked: false,
+                    actions: [
+                        { name: "Examine Ship", run: (state) => {
+                            if (!state.logs.shipExamined) {
+                                state.logs.shipExamined = true;
+                                updateGameText(`You find your datapad on the floor of the cockpit. It's a little scratched up, but it still works. You also find a damaged log entry. ${gameData.locations.crashSite.clue}`);
+                                render();
+                            } else {
+                                updateGameText(`You've already examined the ship. The diagnostic still shows the power cell is offline. The damaged log entry is still open on the console: ${gameData.locations.crashSite.clue}`);
+                            }
+                        }}
+                    ]
+                },
+                bioluminescentForest: { name: "Bioluminescent Forest", description: "You step into a forest where everything glows with a soft, ethereal light. Strange, oversized mushrooms pulse with gentle luminescence.", isLocked: true, items: ["Bioluminescent Fungi"], actions: [{ name: "Harvest Fungi", item: "Bioluminescent Fungi", run: (state) => takeItem("Bioluminescent Fungi") }] },
+                crystalCaves: { name: "Crystal Caves", description: "A network of caves glitters around you. Massive, purple crystals jut from the walls, emitting a low, humming sound that you can feel in your bones.", isLocked: true, items: ["Resonating Crystal"], actions: [{ name: "Mine Crystal", item: "Resonating Crystal", run: (state) => { if (state.inventory.includes("Pickaxe")) { takeItem("Resonating Crystal"); } else { updateGameText("The crystals are too hard to break with your bare hands. You need some kind of tool."); } } }] },
+                geyserFields: { name: "Geyser Fields", description: "The ground here is unstable, covered in cracks from which hot steam erupts unpredictably. The air smells of sulfur. You notice some tough, stringy weeds growing near a hot vent.", isLocked: true, items: ["Volcanic Ash", "Fibrous Net"], actions: [{ name: "Collect Ash", item: "Volcanic Ash", run: (state) => takeItem("Volcanic Ash") }, { name: "Check Stringy Weeds", item: "Fibrous Net", run: (state) => takeItem("Fibrous Net") }] },
+                alienOutpost: { name: "Alien Outpost", description: "A derelict structure of unknown origin stands silently. The architecture is smooth and organic. Inside, consoles are dark, but one seems to have residual power.", isLocked: true, items: ["Power Conduit"], clue: "Data Log: '...the energy matrix must be aligned to the <strong>7th</strong> harmonic to prevent a cascade failure...'", actions: [{ name: "Find Power Conduit", item: "Power Conduit", run: (state) => takeItem("Power Conduit") }, { name: "Check Console", run: (state) => { state.logs.outpostChecked = true; updateGameText(`You manage to power up a console. Most data is corrupt, but you find a partial schematic for a power cell. ${gameData.locations.alienOutpost.clue}`); } }] },
+                acidicSwamp: { name: "Acidic Swamp", description: "Bubbling pools of green acid dot the landscape. The air is thick with corrosive mist. You spot a small, incredibly fast toad-like creature darting between the pools.", isLocked: true, items: ["Corrosive Acid", "Toad Slime"], actions: [{ name: "Collect Acid", item: "Corrosive Acid", run: (state) => { if (state.inventory.includes("Durable Casing")) { takeItem("Corrosive Acid"); } else { updateGameText("You have nothing to safely contain the acid."); } } }, { name: "Catch Elusive Toad", item: "Toad Slime", run: (state) => { if (!state.inventory.includes("Fibrous Net")) { updateGameText("The creature is too fast to catch with your bare hands. You need some kind of net."); return; } if (Math.random() < 0.33) { updateGameText("Success! You deftly snag the toad. It squirms and leaves a sticky, iridescent slime on your net before you release it."); takeItem("Toad Slime"); } else { state.inventory = state.inventory.filter(item => item !== "Fibrous Net"); updateGameText("You lunge with the net, but the toad zips away with a mocking croak. The corrosive mist causes the delicate net to crumble in your hands! <br><strong class='text-red-400'>Net fell apart - search for another!</strong>"); render(); } } }] },
+                abandonedMine: { name: "Abandoned Mine Shaft", description: "A dark maw in the mountainside leads into an old mine. Rusted, alien mining equipment lies abandoned. It seems structurally sound, if a little spooky.", isLocked: true, items: [], actions: [{ name: "Search the Rubble", run: (state) => { if (state.inventory.includes("Durable Casing") && state.inventory.includes("Pickaxe")) { updateGameText("You've picked this area clean. There's nothing else of use here."); return; } if (Math.random() < 0.5) { if (!state.inventory.includes("Durable Casing") && !state.inventory.includes("Pickaxe")) { if (Math.random() < 0.5) takeItem("Durable Casing"); else takeItem("Pickaxe"); } else if (!state.inventory.includes("Durable Casing")) { takeItem("Durable Casing"); } else if (!state.inventory.includes("Pickaxe")) { takeItem("Pickaxe"); } } else { updateGameText("You search through the debris but find nothing of interest this time."); } } }] },
+                theMonolith: { 
+                    name: "The Monolith", 
+                    description: "A colossal, black stone structure looms over the landscape, covered in intricate, glowing carvings that shift and change. It hums with immense power.", 
+                    isLocked: true, 
+                    clue: "Carvings: 'Among the shifting patterns, you notice a recurring theme. A sequence that always starts with the symbol for <strong>1</strong>.'", 
+                    puzzle: { solution: ["1", "7", "3"] },
+                    actions: [
+                        { name: "Examine Carvings", run: (state) => { state.logs.monolithExamined = true; updateGameText(`The carvings seem to depict celestial charts and complex equations. ${gameData.locations.theMonolith.clue}`); } }, 
+                        { name: "Inspect Glowing Pattern", run: (state) => { if (state.inventory.includes("Effulgent Paste")) { state.inventory = state.inventory.filter(item => item !== "Effulgent Paste"); state.logs.monolithCleaned = true; updateGameText("You smear the paste on the translucent layer. It sizzles and dissolves, revealing three deep slots humming with energy. The monolith is ready for activation."); render(); } else { updateGameText("You try to get a closer look at a large glowing area, but the surface is coated in some kind of translucent layer. You can't seem to scrape it off, but whatever is underneath looks important."); } } }, 
+                        { name: "Activate Monolith", run: (state) => { 
+                            if (state.inventory.includes("Quantum Power Cell")) { 
+                                // BUG FIX: Reset puzzle modal state before showing it
+                                document.getElementById('puzzle-input-1').value = '';
+                                document.getElementById('puzzle-input-2').value = '';
+                                document.getElementById('puzzle-input-3').value = '';
+                                document.getElementById('puzzle-feedback').textContent = '';
+                                document.getElementById('submit-puzzle-btn').disabled = false;
+                                document.getElementById('puzzle-modal').classList.remove('hidden'); 
+                            } else { 
+                                updateGameText("The slots seem to be waiting for something. A powerful energy source, perhaps?"); 
+                            } 
+                        } }
+                    ] 
+                }
+            },
+            scanData: {
+                crashSite: { code: '2418', unlocks: ['bioluminescentForest', 'crystalCaves'] },
+                crystalCaves: { code: '7701', unlocks: ['geyserFields'] },
+                bioluminescentForest: { static: true, message: 'The scanner buzzes with static. The dense flora must be interfering.' },
+                geyserFields: { code: '5932', unlocks: ['alienOutpost', 'acidicSwamp'] },
+                alienOutpost: { static: true, message: 'The scanner buzzes with static. The metallic structure is causing interference.' },
+                acidicSwamp: { code: '8164', unlocks: ['abandonedMine', 'theMonolith'] },
+                abandonedMine: { static: true, message: 'The scanner buzzes with static. Too much interference from the rock.' },
+                theMonolith: { static: true, message: 'The scanner whines and shuts down. The energy from the Monolith is overwhelming.' }
+            },
+            items: { "Bioluminescent Fungi": "A mushroom that glows with a soft, blue light. It feels strangely sticky.", "Resonating Crystal": "A purple crystal that hums with a constant, low-frequency energy.", "Volcanic Ash": "Fine, dark ash with metallic flecks. It's warm to the touch.", "Power Conduit": "A well-preserved component, designed to channel immense energy.", "Durable Casing": "A sturdy, non-reactive container found in an old mine.", "Pickaxe": "A sturdy, sharp-ended tool. Looks like it could break rock.", "Corrosive Acid": "A highly potent acid, safely stored in the Durable Casing.", "Effulgent Paste": "A bubbling paste that seems to dissolve organic resins.", "Fibrous Net": "A net woven from tough, heat-resistant plant fibers. Perfect for catching things.", "Toad Slime": "A sticky, iridescent slime. It's non-conductive and seems to be a powerful bonding agent.", "Quantum Power Cell": "A complex device you crafted. It's currently inert, waiting for activation.", "Activated Power Cell": "The cell hums with controlled power, ready for installation." },
+            crafting: [{ recipe: "Quantum Power Cell", ingredients: ["Resonating Crystal", "Power Conduit", "Durable Casing", "Bioluminescent Fungi", "Toad Slime"] }, { recipe: "Effulgent Paste", ingredients: ["Volcanic Ash", "Corrosive Acid"] }]
+        };
+
+        const gameState = {
+            currentLocation: "crashSite",
+            inventory: [],
+            logs: { shipExamined: false, outpostChecked: false, monolithExamined: false, monolithCleaned: false, powerCellCrafted: false, puzzleSolved: false, cellInstalled: false, gameWon: false, launchClicks: 0 },
+            datapadRecipeIndex: 0,
+            usedCodes: []
+        };
+
+        // DOM Elements
+        const gameTextEl = document.getElementById('game-text');
+        const launchCounterTextEl = document.getElementById('launch-counter-text');
+        const currentLocationTextEl = document.getElementById('current-location-text');
+        const actionsContainerEl = document.getElementById('actions-container');
+        const locationsContainerEl = document.getElementById('locations-container');
+        const inventoryContainerEl = document.getElementById('inventory-container');
+        const emptyInventoryTextEl = document.getElementById('empty-inventory-text');
+        const datapadButtonContainer = document.getElementById('datapad-button-container');
+        
+        const datapadModalEl = document.getElementById('datapad-modal');
+        const scanButton = document.getElementById('scan-button');
+        const craftingTabButton = document.getElementById('crafting-tab-button');
+        const craftingSection = document.getElementById('crafting-section');
+        const datapadTabsEl = document.getElementById('datapad-tabs');
+        const schematicNameEl = document.getElementById('schematic-name');
+        const datapadIngredientsEl = document.getElementById('datapad-ingredients');
+        const craftItemBtn = document.getElementById('craft-item-btn');
+        const closeDatapadBtn = document.getElementById('close-datapad-btn');
+
+        const puzzleModalEl = document.getElementById('puzzle-modal');
+        const submitPuzzleBtn = document.getElementById('submit-puzzle-btn');
+        const leavePuzzleBtn = document.getElementById('leave-puzzle-btn');
+        const puzzleFeedbackEl = document.getElementById('puzzle-feedback');
+        
+        let launchInterval;
+
+        function updateGameText(text) { gameTextEl.innerHTML = text; }
+        function takeItem(itemName) { if (!gameState.inventory.includes(itemName)) { gameState.inventory.push(itemName); updateGameText(`You picked up: ${itemName}.`); render(); } }
+        function reExamine() { const location = gameData.locations[gameState.currentLocation]; updateGameText(location.description); }
+
+        function craftItem() {
+            const recipe = gameData.crafting[gameState.datapadRecipeIndex];
+            const hasIngredients = recipe.ingredients.every(ing => gameState.inventory.includes(ing));
+            if (hasIngredients) {
+                gameState.inventory = gameState.inventory.filter(item => !recipe.ingredients.includes(item));
+                gameState.inventory.push(recipe.recipe);
+                if (recipe.recipe === "Quantum Power Cell") gameState.logs.powerCellCrafted = true;
+                updateGameText(`You successfully crafted: ${recipe.recipe}!`);
+                toggleDatapad(false);
+            }
+            render();
+        }
+        
+        function changeLocation(locationKey) {
+            if (gameState.gameWon) return;
+            gameState.currentLocation = locationKey;
+            const location = gameData.locations[gameState.currentLocation];
+            updateGameText(location.description);
+            render();
+        }
+
+        function toggleDatapad(show) {
+            if (show) {
+                craftingSection.classList.add('hidden');
+                renderDatapad();
+                datapadModalEl.classList.remove('hidden');
+            } else {
+                datapadModalEl.classList.add('hidden');
+            }
+        }
+
+        function renderDatapad() {
+            datapadTabsEl.innerHTML = '';
+            gameData.crafting.forEach((recipe, index) => {
+                const tab = document.createElement('button');
+                tab.textContent = recipe.recipe;
+                tab.className = `tab-btn flex-1 p-2 text-sm font-semibold text-gray-300 border-b-2 border-transparent hover:bg-cyan-800/50`;
+                if (index === gameState.datapadRecipeIndex) tab.classList.add('active', 'border-cyan-400');
+                tab.onclick = () => { gameState.datapadRecipeIndex = index; renderDatapad(); };
+                datapadTabsEl.appendChild(tab);
+            });
+
+            const recipe = gameData.crafting[gameState.datapadRecipeIndex];
+            schematicNameEl.textContent = recipe.recipe;
+            datapadIngredientsEl.innerHTML = '';
+            let hasAllIngredients = true;
+            recipe.ingredients.forEach(ingredient => {
+                const hasItem = gameState.inventory.includes(ingredient);
+                const li = document.createElement('div');
+                li.innerHTML = `<span class="inline-block w-6">${hasItem ? '✅' : '❌'}</span> ${ingredient}`;
+                li.className = `text-lg ${hasItem ? 'text-green-400' : 'text-gray-500 opacity-70'}`;
+                datapadIngredientsEl.appendChild(li);
+                if (!hasItem) hasAllIngredients = false;
+            });
+            craftItemBtn.disabled = !hasAllIngredients || gameState.inventory.includes(recipe.recipe);
+            craftItemBtn.classList.toggle('opacity-50', craftItemBtn.disabled);
+            craftItemBtn.classList.toggle('cursor-not-allowed', craftItemBtn.disabled);
+        }
+
+        function scanLocation() {
+            const scanResult = gameData.scanData[gameState.currentLocation];
+            if (scanResult.static) {
+                updateGameText(scanResult.message);
+            } else if (scanResult.code) {
+                updateGameText(`Scan successful. A 4-digit navigation code appears on the datapad screen: <strong class="text-2xl text-yellow-300">${scanResult.code}</strong>. You should enter this at the ship's navigation uplink.`);
+            }
+            toggleDatapad(false);
+        }
+
+        function unlockLocations() {
+            const codeInput = document.getElementById('unlock-code-input');
+            const code = codeInput.value;
+            if (gameState.usedCodes.includes(code)) {
+                updateGameText("This code has already been used.");
+                return;
+            }
+
+            const scanEntry = Object.values(gameData.scanData).find(entry => entry.code === code);
+            if (scanEntry) {
+                scanEntry.unlocks.forEach(locKey => { gameData.locations[locKey].isLocked = false; });
+                gameState.usedCodes.push(code);
+                updateGameText("Uplink accepted. New coordinates added to your map!");
+                codeInput.value = '';
+                render();
+            } else {
+                updateGameText("Invalid code. The uplink terminal buzzes angrily.");
+            }
+        }
+
+        function render() {
+            if (gameState.gameWon) return;
+            const location = gameData.locations[gameState.currentLocation];
+            currentLocationTextEl.textContent = location.name;
+            launchCounterTextEl.textContent = '';
+            actionsContainerEl.innerHTML = '';
+            
+            const reExamineButton = document.createElement('button');
+            reExamineButton.textContent = "Examine Surroundings";
+            reExamineButton.className = "action-btn bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg w-full";
+            reExamineButton.onclick = reExamine;
+            actionsContainerEl.appendChild(reExamineButton);
+
+            if (location.actions) {
+                location.actions.forEach(action => {
+                    if (action.item && gameState.inventory.includes(action.item)) return;
+                    if (action.name === 'Inspect Glowing Pattern' && gameState.logs.monolithCleaned) return;
+                    if (action.name === 'Activate Monolith' && !gameState.logs.monolithCleaned) return;
+                    const button = document.createElement('button');
+                    button.textContent = action.name;
+                    button.className = "action-btn bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg w-full";
+                    button.onclick = () => action.run(gameState);
+                    actionsContainerEl.appendChild(button);
+                });
+            }
+            
+            if (gameState.currentLocation === 'crashSite') {
+                const unlockDiv = document.createElement('div');
+                unlockDiv.className = 'col-span-2 md:col-span-4 bg-gray-900/50 p-4 rounded-lg flex flex-col sm:flex-row items-center gap-2';
+                unlockDiv.innerHTML = `
+                    <label for="unlock-code-input" class="font-semibold text-cyan-300 flex-shrink-0">Navigation Uplink:</label>
+                    <input type="text" id="unlock-code-input" maxlength="4" class="bg-gray-700 text-white rounded-md p-2 w-full sm:w-auto flex-grow text-center" placeholder="4-Digit Code">
+                    <button id="unlock-submit-btn" class="action-btn bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg w-full sm:w-auto">Enter</button>
+                `;
+                actionsContainerEl.appendChild(unlockDiv);
+                document.getElementById('unlock-submit-btn').onclick = unlockLocations;
+
+                if (gameState.inventory.includes('Activated Power Cell') && !gameState.logs.cellInstalled) {
+                    const installButton = document.createElement('button');
+                    installButton.textContent = "Install Activated Cell";
+                    installButton.className = "action-btn bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded-lg w-full";
+                    installButton.onclick = () => { gameState.logs.cellInstalled = true; updateGameText("You slot the Activated Power Cell into the ship's core. It hums to life, and the main console lights up. The launch sequence is ready."); render(); };
+                    actionsContainerEl.appendChild(installButton);
+                }
+                if (gameState.logs.cellInstalled) {
+                    const launchButton = document.createElement('button');
+                    launchButton.textContent = "Initiate Launch Sequence";
+                    launchButton.className = "action-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg w-full";
+                    launchButton.onclick = startLaunchSequence;
+                    actionsContainerEl.appendChild(launchButton);
+                }
+            }
+
+            datapadButtonContainer.innerHTML = '';
+            if (gameState.logs.shipExamined) {
+                 const datapadButton = document.createElement('button');
+                 datapadButton.textContent = "Open Datapad";
+                 datapadButton.className = "action-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-lg text-sm";
+                 datapadButton.onclick = () => toggleDatapad(true);
+                 datapadButtonContainer.appendChild(datapadButton);
+            }
+
+            locationsContainerEl.innerHTML = '';
+            Object.keys(gameData.locations).forEach(key => {
+                const loc = gameData.locations[key];
+                if (loc.isLocked) return;
+                const button = document.createElement('button');
+                button.textContent = loc.name;
+                button.className = "location-btn bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg w-full";
+                if (gameState.currentLocation === key) { button.disabled = true; button.className += " bg-cyan-800 cursor-not-allowed"; }
+                button.onclick = () => changeLocation(key);
+                locationsContainerEl.appendChild(button);
+            });
+
+            inventoryContainerEl.innerHTML = '';
+            if (gameState.inventory.length > 0) {
+                emptyInventoryTextEl.classList.add('hidden');
+                gameState.inventory.forEach(item => {
+                    const itemEl = document.createElement('div');
+                    itemEl.textContent = item;
+                    itemEl.title = gameData.items[item];
+                    itemEl.className = "bg-cyan-900/50 text-cyan-300 py-1 px-3 rounded-md text-sm font-medium cursor-help";
+                    inventoryContainerEl.appendChild(itemEl);
+                });
+            } else {
+                inventoryContainerEl.appendChild(emptyInventoryTextEl);
+                emptyInventoryTextEl.classList.remove('hidden');
+            }
+        }
+        
+        function solvePuzzle() {
+            const solution = gameData.locations.theMonolith.puzzle.solution;
+            if (document.getElementById('puzzle-input-1').value === solution[0] && document.getElementById('puzzle-input-2').value === solution[1] && document.getElementById('puzzle-input-3').value === solution[2]) {
+                puzzleFeedbackEl.textContent = "Correct! The Monolith hums and the Power Cell glows brightly!";
+                puzzleFeedbackEl.className = "text-green-400 h-6";
+                gameState.logs.puzzleSolved = true;
+                gameState.inventory = gameState.inventory.filter(item => item !== "Quantum Power Cell");
+                gameState.inventory.push("Activated Power Cell");
+                submitPuzzleBtn.disabled = true;
+            } else {
+                puzzleFeedbackEl.textContent = "Incorrect sequence. The slots go dark.";
+                document.getElementById('puzzle-input-1').value = ''; document.getElementById('puzzle-input-2').value = ''; document.getElementById('puzzle-input-3').value = ''; document.getElementById('puzzle-input-1').focus();
+            }
+        }
+        
+        function startLaunchSequence() {
+            gameState.launchClicks = 0;
+            let countdown = 10;
+            const launchButton = Array.from(actionsContainerEl.children).find(btn => btn.textContent.includes("Launch"));
+            launchButton.textContent = `DIVERT FUEL! (${countdown})`;
+            launchButton.onclick = () => { gameState.launchClicks++; launchCounterTextEl.textContent = `Fuel Diverted: ${gameState.launchClicks}`; };
+            updateGameText("WARNING: Main thrusters offline! Divert auxiliary fuel to the engines! Repeatedly press the button!");
+            launchCounterTextEl.textContent = `Fuel Diverted: 0`;
+            launchInterval = setInterval(() => {
+                countdown--;
+                launchButton.textContent = `DIVERT FUEL! (${countdown})`;
+                if (countdown <= 0) { clearInterval(launchInterval); if (gameState.launchClicks >= 40) { winGame(); } else { failLaunch(); } }
+            }, 1000);
+        }
+
+        function winGame() {
+            gameState.gameWon = true;
+            document.body.innerHTML = `<div class="w-full max-w-4xl mx-auto bg-gray-800 rounded-2xl shadow-2xl p-8 text-center space-y-6"><h1 class="text-5xl font-bold text-green-400">ESCAPE!</h1><p class="text-xl text-gray-200">You divert just enough fuel! The engines roar to life with a shudder. With a surge of power, the 'Stardust Drifter' lifts off from Xylos, leaving the mysterious alien world behind.</p><p class="text-lg text-gray-400">Thank you for playing!</p><button onclick="location.reload()" class="mt-4 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg action-btn">Play Again</button></div>`;
+        }
+
+        function failLaunch() {
+            updateGameText("You couldn't divert the fuel in time. The engines sputter and die. The power cell overloaded from the failed attempt and is now a useless hunk of junk! <br><strong class='text-red-400'>You'll have to craft another one!</strong>");
+            launchCounterTextEl.textContent = '';
+            gameState.logs.cellInstalled = false; gameState.logs.powerCellCrafted = false; gameState.logs.puzzleSolved = false;
+            gameState.inventory = gameState.inventory.filter(item => item !== 'Activated Power Cell');
+            render();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateGameText("You awaken to the jarring sound of emergency alarms. Your head hurts. Outside the viewport, a strange, alien landscape stretches to the horizon. You've crashed.");
+            render();
+            craftItemBtn.addEventListener('click', craftItem);
+            scanButton.addEventListener('click', scanLocation);
+            craftingTabButton.addEventListener('click', () => craftingSection.classList.toggle('hidden'));
+            closeDatapadBtn.addEventListener('click', () => toggleDatapad(false));
+            submitPuzzleBtn.addEventListener('click', solvePuzzle);
+            leavePuzzleBtn.addEventListener('click', () => {
+                puzzleModalEl.classList.add('hidden');
+                if(gameState.logs.puzzleSolved) { updateGameText("The Quantum Power Cell is now active! You should return to the ship immediately."); render(); }
+            });
+        });
+
+    </script>
+</body>
+</html>

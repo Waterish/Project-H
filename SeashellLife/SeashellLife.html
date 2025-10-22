@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seashell Life</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Patrick+Hand&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F0EAD6; /* Sandy color */
+            transition: background-color 0.5s ease;
+        }
+        .font-patrick-hand {
+            font-family: 'Patrick Hand', cursive;
+        }
+        .game-container {
+            max-width: 1000px;
+            margin: auto;
+            background-color: #FFFFFF;
+            border: 8px solid #D2B48C; /* Tan border */
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: background-color 0.5s ease, border-color 0.5s ease;
+        }
+        .action-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .inventory-item {
+            border: 2px dashed #D2B48C;
+            background-color: #FAF6EB;
+            transition: transform 0.2s, border-color 0.5s ease, background-color 0.5s ease;
+        }
+        .inventory-item:hover {
+            transform: scale(1.05);
+            border-style: solid;
+        }
+        #modal-backdrop {
+            background-color: rgba(0,0,0,0.5);
+            transition: opacity 0.3s ease-in-out;
+        }
+        #modal-content {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        /* Night Theme */
+        .night-theme {
+            background-color: #2c3e50; /* Midnight Blue */
+            border-color: #1a2533;
+        }
+        .night-theme body {
+             background-color: #1a2533;
+        }
+        .night-theme header {
+            background-color: #34495e !important; /* Wet Asphalt */
+            border-color: #5D6D7E !important;
+        }
+        .night-theme h1, .night-theme #game-status, .night-theme h2, .night-theme h3 {
+             color: #ecf0f1 !important; /* Clouds */
+        }
+        .night-theme #main-display {
+            background-color: #2c3e50 !important;
+            border-color: #5D6D7E !important;
+        }
+        .night-theme #actions-pane {
+            background-color: #34495e !important;
+        }
+        .night-theme #inventory-section {
+             border-color: #5D6D7E !important;
+        }
+        .night-theme .inventory-item {
+            background-color: #34495e;
+            border-color: #5D6D7E;
+        }
+         .night-theme .inventory-item .font-semibold {
+            color: #ecf0f1;
+         }
+         .night-theme .inventory-item .text-xs {
+            color: #bdc3c7;
+         }
+        .night-theme #main-display p {
+            color: #ecf0f1 !important;
+        }
+        .night-theme #main-display .text-cyan-800 {
+            color: #99ddff !important;
+        }
+        .night-theme #main-display .text-indigo-600 {
+            color: #c3aed6 !important;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+
+    <div class="game-container rounded-2xl p-4 sm:p-6">
+        <!-- Header -->
+        <header class="text-center p-4 border-b-4 border-dashed border-[#A0D2DB] bg-[#E0F7FA] rounded-t-lg transition-colors duration-500">
+            <h1 class="font-patrick-hand text-4xl sm:text-5xl text-[#00838F]">Seashell Life</h1>
+            <div id="game-status" class="flex justify-around items-center mt-3 text-sm sm:text-base text-[#006064]">
+                <div id="day-counter">Day: 1</div>
+                <div id="day-of-week">Monday</div>
+                <div id="time-of-day" class="font-bold">☀️ Day</div>
+            </div>
+             <div id="special-event" class="mt-2 text-sm text-cyan-700 font-semibold italic"></div>
+        </header>
+
+        <!-- Main Display -->
+        <main id="main-display" class="p-4 my-4 h-48 sm:h-56 overflow-y-auto bg-[#F0F7F8] rounded-lg border-2 border-[#A0D2DB] transition-colors duration-500">
+            <!-- Game messages will appear here -->
+        </main>
+
+        <!-- Actions Pane -->
+        <section id="actions-pane" class="p-4 bg-[#E0F7FA] rounded-lg transition-colors duration-500">
+            <h2 class="font-patrick-hand text-2xl text-center mb-4 text-[#00838F]">What will you do?</h2>
+            <div id="action-buttons" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <!-- Action buttons will be generated here -->
+            </div>
+        </section>
+
+        <!-- Inventory -->
+        <section id="inventory-section" class="mt-4 p-4 border-t-4 border-dashed border-[#A0D2DB] transition-colors duration-500">
+            <h2 class="font-patrick-hand text-3xl text-center mb-4 text-[#00838F]">Your Collection</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <h3 class="font-patrick-hand text-xl text-[#006064] mb-2">🐚 Shells</h3>
+                    <div id="inventory-shells" class="grid grid-cols-2 sm:grid-cols-3 gap-2 min-h-[60px] p-2 bg-[#F0F7F8] rounded transition-colors duration-500"></div>
+                </div>
+                <div>
+                    <h3 class="font-patrick-hand text-xl text-[#006064] mb-2">💎 Materials</h3>
+                    <div id="inventory-materials" class="grid grid-cols-2 sm:grid-cols-3 gap-2 min-h-[60px] p-2 bg-[#F0F7F8] rounded transition-colors duration-500"></div>
+                </div>
+                <div>
+                    <h3 class="font-patrick-hand text-xl text-[#006064] mb-2">🛠️ Tools</h3>
+                    <div id="inventory-tools" class="grid grid-cols-2 sm:grid-cols-3 gap-2 min-h-[60px] p-2 bg-[#F0F7F8] rounded transition-colors duration-500"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal-backdrop" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <div id="modal-content" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md transform scale-95">
+            <!-- Modal content will be injected here -->
+        </div>
+    </div>
+
+    <script>
+        // --- GAME DATA ---
+        const ITEMS = {
+            // Shells
+            scallop: { name: 'Scallop Shell', type: 'shell', desc: 'A classic fan-shaped shell.' },
+            conch: { name: 'Conch Shell', type: 'shell', desc: 'You can almost hear the ocean.' },
+            whelk: { name: 'Whelk Shell', type: 'shell', desc: 'A spiral shell, home to a sea snail.' },
+            moonSnail: { name: 'Moon Snail Shell', type: 'shell', desc: 'Smooth and perfectly round.' },
+            abalone: { name: 'Abalone Fragment', type: 'shell', desc: 'Shimmers with iridescent colors.' },
+            sandDollar: { name: 'Sand Dollar', type: 'shell', desc: 'A fragile, star-marked treasure.' },
+            phosphorClam: { name: 'Phosphor Clam', type: 'shell', desc: 'Glows faintly in the dark.' },
+            pearlOyster: { name: 'Pearl Oyster', type: 'shell', desc: 'Maybe there is something inside?' },
+
+            // Materials
+            driftwood: { name: 'Driftwood', type: 'material', desc: 'Wood smoothed by the waves.' },
+            seaGlass: { name: 'Sea Glass', type: 'material', desc: 'A colorful, frosted piece of glass.' },
+            seaweed: { name: 'Seaweed', type: 'material', desc: 'Slippery, leafy sea-plant.' },
+            pebble: { name: 'Smooth Pebble', type: 'material', desc: 'A perfectly smooth, gray stone.' },
+            ironScrap: { name: 'Iron Scrap', type: 'material', desc: 'A rusty piece of metal.' },
+            stardust: { name: 'Stardust', type: 'material', desc: 'Glimmering dust from the night sky.' },
+            mapScrap: { name: 'Map Scrap', type: 'material', desc: 'A torn piece of an old map.' },
+            crystalShard: { name: 'Crystal Shard', type: 'material', desc: 'A fragment from a deep cave.'},
+            pearlOfTheDeep: { name: 'Pearl of the Deep', type: 'material', desc: 'The legendary prize! You found it!'},
+
+            // Tools
+            siftingPan: { name: 'Sifting Pan', type: 'tool', desc: 'Helps find smaller items in the sand.' },
+            sturdyShovel: { name: 'Sturdy Shovel', type: 'tool', desc: 'Can dig deeper than your hands.' },
+            metalDetector: { name: 'Metal Detector', type: 'tool', desc: 'Beeps when it finds metal.' },
+            divingMask: { name: 'Diving Mask', type: 'tool', desc: 'Lets you see clearly underwater.'},
+            caveLantern: { name: 'Cave Lantern', type: 'tool', desc: 'Illuminates the darkest places.'},
+        };
+
+        const TOOL_RECIPES = {
+            siftingPan: { requires: { driftwood: 2, seaweed: 3 }, name: 'Sifting Pan' },
+            sturdyShovel: { requires: { driftwood: 3, ironScrap: 1 }, name: 'Sturdy Shovel' },
+            metalDetector: { requires: { ironScrap: 4, stardust: 1 }, name: 'Metal Detector' },
+            divingMask: { requires: { seaGlass: 3, seaweed: 2 }, name: 'Diving Mask' },
+            caveLantern: { requires: { phosphorClam: 5, ironScrap: 2 }, name: 'Cave Lantern' },
+        };
+
+        const LOCATIONS = {
+            sandyShoals: {
+                name: 'Sandy Shoals',
+                unlocked: true,
+                dayItems: { scallop: 0.5, whelk: 0.3, driftwood: 0.4, seaGlass: 0.2, pebble: 0.5 },
+                nightItems: { moonSnail: 0.4, phosphorClam: 0.2, driftwood: 0.3, stardust: 0.05 },
+                special: {
+                    lowTide: { sandDollar: 0.3, conch: 0.2 },
+                    jellyfishBloom: {}
+                }
+            },
+            tidalPools: {
+                name: 'Tidal Pools',
+                unlocked: false,
+                unlockItem: 'sturdyShovel',
+                unlockMessage: "With your new shovel, you clear the rockslide blocking the path to the Tidal Pools!",
+                dayItems: { conch: 0.4, abalone: 0.2, seaweed: 0.6, ironScrap: 0.1, mapScrap: 0.05 },
+                nightItems: { abalone: 0.3, phosphorClam: 0.3, pearlOyster: 0.1 },
+                special: {
+                    lowTide: { sandDollar: 0.2, pearlOyster: 0.2 },
+                    jellyfishBloom: { seaGlass: 0.5 } // They wash up glass
+                }
+            },
+            crystalCaves: {
+                name: 'Crystal Caves',
+                unlocked: false,
+                unlockItem: 'caveLantern',
+                unlockMessage: "Your lantern pierces the gloom, revealing the entrance to the Crystal Caves!",
+                dayItems: {}, // Can't explore without light
+                nightItems: { crystalShard: 0.7, stardust: 0.2, pearlOfTheDeep: 0.1 }, // Can only find the pearl with the lantern at night
+                 special: {
+                    lowTide: {},
+                    jellyfishBloom: {}
+                }
+            }
+        };
+        
+        const SWIM_ITEMS = {
+            day: { seaGlass: 0.4, seaweed: 0.5, conch: 0.1, pebble: 0.3 },
+            night: { phosphorClam: 0.3, abalone: 0.2, moonSnail: 0.2 },
+            divingMask: { pearlOyster: 0.3, ironScrap: 0.2, sandDollar: 0.1 } // Bonus items with mask
+        };
+
+        const STARGAZE_ITEMS = { stardust: 0.6, moonSnail: 0.2, mapScrap: 0.05 };
+
+        const TRADERS = {
+            // Sunday: A relaxed collector
+            Sunday: { name: 'Old Man Hemlock', wants: { pebble: 5 }, offers: { mapScrap: 1 }, dialogue: "Ah, these pebbles are perfect for my collection. Here, take this old scrap I found." },
+            // Monday: A chef
+            Monday: { name: 'Chef Antoine', wants: { scallop: 3 }, offers: { ironScrap: 1 }, dialogue: "Magnifique! These scallops will be delicious. I found this piece of junk by the docks." },
+            // Tuesday: An artist
+            Tuesday: { name: 'Marina the Artist', wants: { seaGlass: 4 }, offers: { driftwood: 2 }, dialogue: "Such lovely colors! This will be perfect for my mosaic. You can have this wood." },
+            // Wednesday: A jeweler
+            Wednesday: { name: 'Gemma the Jeweler', wants: { abalone: 2 }, offers: { stardust: 1 }, dialogue: "The shimmer... exquisite! I'll trade you some stardust I've collected for it." },
+            // Thursday: A mystic
+            Thursday: { name: 'Mystic Maeve', wants: { moonSnail: 3 }, offers: { phosphorClam: 2 }, dialogue: "The moon snails whisper secrets. I will trade you these glowing shells for their wisdom." },
+            // Friday: A shipwright
+            Friday: { name: 'Riggs the Shipwright', wants: { driftwood: 5 }, offers: { ironScrap: 2 }, dialogue: "Good sturdy wood. I can use this. Here's some metal I can't use." },
+            // Saturday: Market closed
+            Saturday: null
+        };
+
+        const FESTIVAL_REWARDS = {
+            scallop: { text: "You enter your Scallop Shell in a beauty contest. You win 2nd place!", reward: { seaGlass: 3 } },
+            stardust: { text: "You toss your Stardust into the bonfire. It erupts in a shower of beautiful sparks, delighting everyone! Someone hands you a gift.", reward: { pearlOyster: 1 } },
+            conch: { text: "You blow the Conch shell, creating a deep, resonant sound that becomes the festival's anthem for a moment. The festival organizer thanks you.", reward: { mapScrap: 1 } },
+            default: { text: "You show off your item. People seem mildly interested. You have a good time and find something on the way home.", reward: { pebble: 3 } }
+        };
+
+        // --- GAME STATE ---
+        let gameState = {
+            day: 1,
+            time: 'Day', // Day or Night
+            dayOfWeekIndex: 0, // 0 for Monday
+            weekdays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+            inventory: { shells: {}, materials: {}, tools: {} },
+            locations: JSON.parse(JSON.stringify(LOCATIONS)),
+            specialEvent: null, // e.g., { name: 'Low Tide', duration: 2 }
+            gameOver: false,
+        };
+
+        // --- DOM ELEMENTS ---
+        const gameContainer = document.querySelector('.game-container');
+        const bodyEl = document.querySelector('body');
+        const mainDisplay = document.getElementById('main-display');
+        const dayCounter = document.getElementById('day-counter');
+        const dayOfWeekEl = document.getElementById('day-of-week');
+        const timeOfDayEl = document.getElementById('time-of-day');
+        const specialEventEl = document.getElementById('special-event');
+        const actionButtonsContainer = document.getElementById('action-buttons');
+        const invShells = document.getElementById('inventory-shells');
+        const invMaterials = document.getElementById('inventory-materials');
+        const invTools = document.getElementById('inventory-tools');
+        const modalBackdrop = document.getElementById('modal-backdrop');
+        const modalContent = document.getElementById('modal-content');
+
+        // --- GAME LOGIC ---
+
+        function logMessage(message, type = 'normal') {
+            const p = document.createElement('p');
+            p.innerHTML = message; // Using innerHTML to allow for bold tags etc.
+            if (type === 'important') {
+                p.className = 'font-bold text-cyan-800 my-1';
+            } else if (type === 'event') {
+                 p.className = 'italic text-indigo-600 my-1';
+            }
+            else {
+                p.className = 'text-gray-700 my-1';
+            }
+            mainDisplay.appendChild(p);
+            mainDisplay.scrollTop = mainDisplay.scrollHeight;
+        }
+
+        function updateUI() {
+            if (gameState.gameOver) return;
+
+            // Theme
+            if (gameState.time === 'Night') {
+                gameContainer.classList.add('night-theme');
+                bodyEl.classList.add('night-theme');
+            } else {
+                gameContainer.classList.remove('night-theme');
+                bodyEl.classList.remove('night-theme');
+            }
+
+            // Header
+            dayCounter.textContent = `Day: ${gameState.day}`;
+            dayOfWeekEl.innerHTML = `📅 ${gameState.weekdays[gameState.dayOfWeekIndex]}`;
+            timeOfDayEl.innerHTML = gameState.time === 'Day' ? '☀️ Day' : '🌙 Night';
+            
+            if(gameState.specialEvent) {
+                specialEventEl.textContent = `Special Event: ${gameState.specialEvent.name}!`;
+                specialEventEl.classList.remove('hidden');
+            } else {
+                specialEventEl.classList.add('hidden');
+            }
+
+            // Actions
+            actionButtonsContainer.innerHTML = '';
+            const actions = getAvailableActions();
+            actions.forEach(action => {
+                const button = document.createElement('button');
+                button.textContent = action.name;
+                button.className = `action-btn w-full p-3 rounded-lg text-white font-semibold shadow-md ${action.color}`;
+                button.onclick = () => handleAction(action.id);
+                actionButtonsContainer.appendChild(button);
+            });
+
+            // Inventory
+            updateInventoryView(invShells, 'shell');
+            updateInventoryView(invMaterials, 'material');
+            updateInventoryView(invTools, 'tool');
+        }
+        
+        function updateInventoryView(container, type) {
+            container.innerHTML = '';
+            const itemsOfType = Object.entries(gameState.inventory)
+                .flatMap(([category, items]) => Object.entries(items).map(([id, count]) => ({ id, count, ...ITEMS[id] })))
+                .filter(item => item.type === type);
+
+            if (itemsOfType.length === 0) {
+                const p = document.createElement('p');
+                p.textContent = 'Nothing here yet...';
+                p.className = 'text-gray-500 italic p-2';
+                container.appendChild(p);
+            } else {
+                itemsOfType.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'inventory-item p-2 rounded text-center';
+                    itemDiv.title = item.desc;
+                    itemDiv.innerHTML = `
+                        <div class="font-semibold text-sm">${item.name}</div>
+                        <div class="text-xs text-gray-600">x ${item.count}</div>
+                    `;
+                    container.appendChild(itemDiv);
+                });
+            }
+        }
+
+        function getAvailableActions() {
+            const dayOfWeek = gameState.weekdays[gameState.dayOfWeekIndex];
+            if (gameState.time === 'Day') {
+                if (dayOfWeek === 'Saturday') {
+                     return [{ id: 'prepareFestival', name: 'Prepare for Festival', color: 'bg-yellow-500' }];
+                }
+                return [
+                    { id: 'combBeach', name: 'Comb the Beach', color: 'bg-amber-500' },
+                    { id: 'swim', name: 'Swim in the Ocean', color: 'bg-cyan-500' },
+                    { id: 'checkMarket', name: 'Check the Market', color: 'bg-teal-500' },
+                ];
+            } else { // Night
+                 if (dayOfWeek === 'Saturday') {
+                     return [{ id: 'goToFestival', name: 'Go to the Festival!', color: 'bg-purple-600' }];
+                }
+                return [
+                    { id: 'combBeach', name: 'Comb the Beach', color: 'bg-indigo-500' },
+                    { id: 'tinker', name: 'Tinker with Parts', color: 'bg-slate-500' },
+                    { id: 'stargaze', name: 'Stargaze', color: 'bg-purple-500' },
+                ];
+            }
+        }
+
+        function handleAction(actionId) {
+            if (gameState.gameOver) return;
+            mainDisplay.innerHTML = ''; // Clear display for new messages
+            switch (actionId) {
+                case 'combBeach':
+                    showLocationPicker();
+                    break;
+                case 'swim':
+                    swimInOcean();
+                    break;
+                case 'checkMarket':
+                    checkMarket();
+                    break;
+                case 'tinker':
+                    tinker();
+                    break;
+                case 'stargaze':
+                    stargaze();
+                    break;
+                case 'prepareFestival':
+                    logMessage("You spend the day relaxing and getting ready for the Beach Festival tonight. The market is closed today.");
+                    advanceTime();
+                    break;
+                case 'goToFestival':
+                    showFestivalPicker();
+                    break;
+            }
+        }
+        
+        function addItem(itemId, quantity = 1) {
+            const item = ITEMS[itemId];
+            if (!item) return;
+
+            const category = item.type + 's'; // shells, materials, tools
+            if (!gameState.inventory[category]) gameState.inventory[category] = {};
+            
+            if (gameState.inventory[category][itemId]) {
+                gameState.inventory[category][itemId] += quantity;
+            } else {
+                gameState.inventory[category][itemId] = quantity;
+            }
+        }
+
+        function removeItem(itemId, quantity = 1) {
+            const item = ITEMS[itemId];
+            if (!item) return false;
+
+            const category = item.type + 's';
+            if (gameState.inventory[category] && gameState.inventory[category][itemId] >= quantity) {
+                gameState.inventory[category][itemId] -= quantity;
+                if (gameState.inventory[category][itemId] === 0) {
+                    delete gameState.inventory[category][itemId];
+                }
+                return true;
+            }
+            return false;
+        }
+
+        function hasItem(itemId, quantity = 1) {
+            const item = ITEMS[itemId];
+            if (!item) return false;
+            const category = item.type + 's';
+            return gameState.inventory[category] && gameState.inventory[category][itemId] >= quantity;
+        }
+
+        function advanceTime() {
+            if (gameState.time === 'Day') {
+                gameState.time = 'Night';
+            } else {
+                gameState.time = 'Day';
+                gameState.day++;
+                gameState.dayOfWeekIndex = (gameState.dayOfWeekIndex + 1) % 7;
+                
+                // Handle special events
+                if (gameState.specialEvent) {
+                    gameState.specialEvent.duration--;
+                    if (gameState.specialEvent.duration <= 0) {
+                        logMessage(`The ${gameState.specialEvent.name} has ended.`, 'event');
+                        gameState.specialEvent = null;
+                    }
+                } else {
+                    // New event check
+                    if (Math.random() < 0.15) { // 15% chance of an event
+                        const isLowTide = Math.random() < 0.7;
+                        gameState.specialEvent = {
+                            name: isLowTide ? 'Low Tide' : 'Jellyfish Bloom',
+                            duration: isLowTide ? 2 : 1 // Days
+                        };
+                        logMessage(`A ${gameState.specialEvent.name} has started! This might affect what you find.`, 'event');
+                    }
+                }
+            }
+            updateUI();
+        }
+        
+        function findItems(itemTable) {
+            const foundItems = {};
+            let foundSomething = false;
+            for (const [itemId, chance] of Object.entries(itemTable)) {
+                if (Math.random() < chance) {
+                    foundItems[itemId] = (foundItems[itemId] || 0) + 1;
+                    addItem(itemId, 1);
+                    foundSomething = true;
+                }
+            }
+            return foundSomething ? foundItems : null;
+        }
+
+        // --- ACTION IMPLEMENTATIONS ---
+
+        function showLocationPicker() {
+            let content = `<h3 class="font-patrick-hand text-2xl mb-4 text-center">Where to comb?</h3>`;
+            content += `<div class="space-y-2">`;
+            Object.entries(gameState.locations).forEach(([id, loc]) => {
+                if (loc.unlocked) {
+                    content += `<button onclick="executeCombBeach('${id}')" class="w-full p-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600">${loc.name}</button>`;
+                } else {
+                    content += `<button class="w-full p-3 bg-gray-400 text-white rounded-lg cursor-not-allowed" disabled>??? (Locked)</button>`;
+                }
+            });
+            content += `</div><button onclick="hideModal()" class="w-full p-2 mt-4 bg-gray-200 rounded-lg">Cancel</button>`;
+            showModal(content);
+        }
+
+        function executeCombBeach(locationId) {
+            hideModal();
+            const location = gameState.locations[locationId];
+            logMessage(`You spend the ${gameState.time.toLowerCase()} combing the beach at <b>${location.name}</b>.`);
+            
+            let lootTable = gameState.time === 'Day' ? { ...location.dayItems } : { ...location.nightItems };
+            
+            // Add special event items
+            if (gameState.specialEvent && location.special[gameState.specialEvent.name]) {
+                lootTable = { ...lootTable, ...location.special[gameState.specialEvent.name] };
+                 logMessage(`The ${gameState.specialEvent.name} reveals some unusual things...`, 'event');
+            }
+            
+            // Add tool bonuses
+            if (hasItem('siftingPan')) {
+                lootTable.seaGlass = (lootTable.seaGlass || 0) + 0.2;
+                lootTable.pebble = (lootTable.pebble || 0) + 0.2;
+            }
+             if (hasItem('metalDetector')) {
+                lootTable.ironScrap = (lootTable.ironScrap || 0) + 0.3;
+            }
+            
+            const found = findItems(lootTable);
+            
+            if (found) {
+                logMessage("You found:", 'important');
+                Object.entries(found).forEach(([id, count]) => {
+                    logMessage(`&bull; ${ITEMS[id].name} x ${count}`);
+                });
+            } else {
+                logMessage("You didn't find anything of interest this time.");
+            }
+            
+            advanceTime();
+        }
+        
+        function swimInOcean() {
+            logMessage(`You take a refreshing swim in the ocean.`);
+            let lootTable = gameState.time === 'Day' ? { ...SWIM_ITEMS.day } : { ...SWIM_ITEMS.night };
+            
+            if (hasItem('divingMask')) {
+                logMessage("Your diving mask lets you see much more clearly!", 'important');
+                lootTable = {...lootTable, ...SWIM_ITEMS.divingMask };
+            }
+
+            if (gameState.specialEvent?.name === 'jellyfishBloom') {
+                logMessage("The water is full of jellyfish! You decide to stay in the shallows and quickly get out.", 'event');
+            } else {
+                const found = findItems(lootTable);
+                if (found) {
+                    logMessage("Underwater, you spotted:", 'important');
+                    Object.entries(found).forEach(([id, count]) => {
+                        logMessage(`&bull; ${ITEMS[id].name} x ${count}`);
+                    });
+                } else {
+                    logMessage("You enjoyed the swim but didn't find anything.");
+                }
+            }
+            advanceTime();
+        }
+        
+        function checkMarket() {
+            const day = gameState.weekdays[gameState.dayOfWeekIndex];
+            const trader = TRADERS[day];
+            
+            if (!trader) {
+                logMessage("The market is quiet today. Everyone must be preparing for the festival.");
+                advanceTime();
+                return;
+            }
+            
+            const canTrade = hasItem(Object.keys(trader.wants)[0], Object.values(trader.wants)[0]);
+            
+            let content = `<h3 class="font-patrick-hand text-2xl mb-2 text-center">${trader.name} is here today.</h3>`;
+            content += `<p class="text-center italic text-gray-600 mb-4">"${trader.dialogue}"</p>`;
+            content += `<div class="text-center border-2 p-3 rounded-lg bg-gray-50">
+                <p><b>Wants:</b> ${Object.values(trader.wants)[0]} x ${ITEMS[Object.keys(trader.wants)[0]].name}</p>
+                <p class="my-2 text-2xl">&darr;</p>
+                <p><b>Offers:</b> ${Object.values(trader.offers)[0]} x ${ITEMS[Object.keys(trader.offers)[0]].name}</p>
+            </div>`;
+            
+            content += `<button onclick="executeTrade('${Object.keys(trader.wants)[0]}', ${Object.values(trader.wants)[0]}, '${Object.keys(trader.offers)[0]}', ${Object.values(trader.offers)[0]})" 
+                class="w-full p-3 mt-4 text-white rounded-lg ${canTrade ? 'bg-teal-500 hover:bg-teal-600' : 'bg-gray-400 cursor-not-allowed'}" 
+                ${!canTrade ? 'disabled' : ''}>Make Trade</button>`;
+            
+            content += `<button onclick="leaveMarket()" class="w-full p-2 mt-2 bg-gray-200 rounded-lg">Leave</button>`;
+            
+            showModal(content);
+        }
+
+        function executeTrade(wantsId, wantsQty, offersId, offersQty) {
+            if (removeItem(wantsId, wantsQty)) {
+                addItem(offersId, offersQty);
+                logMessage(`You traded with the merchant and received <b>${ITEMS[offersId].name}</b>.`, 'important');
+            } else {
+                logMessage("You didn't have the items to trade.");
+            }
+            hideModal();
+            advanceTime();
+        }
+
+        function leaveMarket() {
+            hideModal();
+            logMessage("You decided not to trade today.");
+            advanceTime();
+        }
+
+        function tinker() {
+            logMessage("You spend the night tinkering with your collected parts...");
+            
+            // Check for craftable tools
+            let craftedToolId = null;
+            for (const [toolId, recipe] of Object.entries(TOOL_RECIPES)) {
+                if (!hasItem(toolId)) { // If we don't already have the tool
+                    const canCraft = Object.entries(recipe.requires).every(([matId, qty]) => hasItem(matId, qty));
+                    if (canCraft) {
+                        // Craft it!
+                        Object.entries(recipe.requires).forEach(([matId, qty]) => removeItem(matId, qty));
+                        addItem(toolId, 1);
+                        craftedToolId = toolId;
+                        break; // Only craft one tool per night
+                    }
+                }
+            }
+
+            if (craftedToolId) {
+                logMessage(`Success! You pieced together a <b>${ITEMS[craftedToolId].name}</b>!`, 'important');
+                // Check if this tool unlocks a location
+                Object.entries(gameState.locations).forEach(([locId, loc]) => {
+                    if (loc.unlockItem === craftedToolId && !loc.unlocked) {
+                        gameState.locations[locId].unlocked = true;
+                        logMessage(loc.unlockMessage, 'event');
+                    }
+                });
+            } else {
+                // No tool crafted, give a hint and swap a material
+                const uncraftedRecipes = Object.entries(TOOL_RECIPES).filter(([id]) => !hasItem(id));
+                if (uncraftedRecipes.length > 0) {
+                    const [hintToolId, hintRecipe] = uncraftedRecipes[Math.floor(Math.random() * uncraftedRecipes.length)];
+                    const missingMaterial = Object.keys(hintRecipe.requires).find(matId => !hasItem(matId, hintRecipe.requires[matId]));
+                    
+                    if (missingMaterial) {
+                        logMessage(`You had an idea for a new contraption, but you feel like you're missing something... perhaps some <b>${ITEMS[missingMaterial].name}</b>?`);
+                    } else {
+                        logMessage("You tinkered for a while but couldn't come up with a finished project.");
+                    }
+
+                    // Use up one part and convert it
+                    const playerMaterials = Object.keys(gameState.inventory.materials || {});
+                    if (playerMaterials.length > 0) {
+                        const usedMaterialId = playerMaterials[Math.floor(Math.random() * playerMaterials.length)];
+                        
+                        const allMaterialIds = Object.keys(ITEMS).filter(id => ITEMS[id].type === 'material' && id !== 'pearlOfTheDeep');
+                        let newMaterialId = allMaterialIds[Math.floor(Math.random() * allMaterialIds.length)];
+                        while(newMaterialId === usedMaterialId) { // Ensure it's a different material
+                             newMaterialId = allMaterialIds[Math.floor(Math.random() * allMaterialIds.length)];
+                        }
+
+                        removeItem(usedMaterialId, 1);
+                        addItem(newMaterialId, 1);
+                        logMessage(`While tinkering, you used up one <b>${ITEMS[usedMaterialId].name}</b> and accidentally created a <b>${ITEMS[newMaterialId].name}</b>.`);
+                    }
+                } else {
+                    logMessage("You've crafted every tool you can think of!");
+                }
+            }
+
+            advanceTime();
+        }
+
+        function stargaze() {
+            logMessage("You lay on the beach and watch the stars. It's beautiful.");
+            const found = findItems(STARGAZE_ITEMS);
+            if (found) {
+                logMessage("As you watched, you noticed something fall from the sky!", 'important');
+                 Object.entries(found).forEach(([id, count]) => {
+                    logMessage(`&bull; ${ITEMS[id].name} x ${count}`);
+                });
+            } else {
+                logMessage("A peaceful night, but you didn't find anything unusual.");
+            }
+            advanceTime();
+        }
+
+        function showFestivalPicker() {
+            const allItems = [
+                ...Object.keys(gameState.inventory.shells || {}),
+                ...Object.keys(gameState.inventory.materials || {}),
+            ];
+
+            let content = `<h3 class="font-patrick-hand text-2xl mb-4 text-center">The Beach Festival is lively!</h3>`;
+            content += `<p class="text-center mb-4">What will you bring to show off?</p>`;
+            content += `<div class="space-y-2 max-h-60 overflow-y-auto">`;
+
+            if (allItems.length > 0) {
+                allItems.forEach(itemId => {
+                    content += `<button onclick="executeFestival('${itemId}')" class="w-full text-left p-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600">${ITEMS[itemId].name}</button>`;
+                });
+            } else {
+                content += `<p class="text-gray-500 italic text-center">You have nothing to bring.</p>`;
+            }
+
+            content += `</div><button onclick="executeFestival('nothing')" class="w-full p-2 mt-4 bg-gray-200 rounded-lg">Just enjoy the festival</button>`;
+            showModal(content);
+        }
+
+        function executeFestival(itemId) {
+            hideModal();
+            logMessage("The festival is a whirl of music, lights, and laughter.");
+            
+            if (itemId === 'nothing') {
+                logMessage("You enjoy the festivities and have a wonderful time.");
+            } else {
+                const outcome = FESTIVAL_REWARDS[itemId] || FESTIVAL_REWARDS.default;
+                logMessage(outcome.text, 'event');
+                Object.entries(outcome.reward).forEach(([id, qty]) => {
+                    addItem(id, qty);
+                    logMessage(`You received <b>${qty} x ${ITEMS[id].name}</b>!`, 'important');
+                });
+            }
+            advanceTime();
+        }
+
+
+        function showModal(content) {
+            modalContent.innerHTML = content;
+            modalBackdrop.classList.remove('hidden');
+            modalBackdrop.classList.add('flex');
+            setTimeout(() => {
+                modalBackdrop.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function hideModal() {
+            modalBackdrop.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                modalBackdrop.classList.add('hidden');
+                modalBackdrop.classList.remove('flex');
+            }, 300);
+        }
+        
+        function checkForWin() {
+            if (hasItem('pearlOfTheDeep')) {
+                gameState.gameOver = true;
+                mainDisplay.innerHTML = '';
+                logMessage("You hold the Pearl of the Deep in your hands. It glows with a soft, warm light, humming with the energy of the ocean. Your grandfather's legend was true!", 'event');
+                logMessage(`It took you ${gameState.day} days to find it. An incredible achievement!`, 'important');
+                logMessage("Thank you for playing Seashell Life! Refresh the page to start a new journey.");
+                actionButtonsContainer.innerHTML = `<p class="text-center text-xl font-patrick-hand text-cyan-700">You've completed your quest!</p>`;
+            }
+        }
+        
+        // --- INITIALIZATION ---
+        function init() {
+            logMessage("Welcome to Seashell Life!");
+            logMessage("Your grandfather, a legendary beachcomber, spoke of a legendary <b>Pearl of the Deep</b>, said to be hidden within the treacherous <b>Crystal Caves</b>.", 'important');
+            logMessage("To find it, you'll need to explore, craft tools, and follow the whispers of the tides. Your journey begins now on Sandy Shoals.");
+            
+            // Set up a recurring check for the win condition
+            setInterval(checkForWin, 1000);
+
+            updateUI();
+        }
+
+        init();
+    </script>
+</body>
+</html>

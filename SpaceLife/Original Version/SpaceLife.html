@@ -1,0 +1,2526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Life</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?Orbitron:wght@400;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: #0c0a1a;
+            color: #c0c0ff;
+        }
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .game-container {
+            border: 2px solid #4a4a8a;
+            background-color: rgba(10, 8, 20, 0.8);
+            box-shadow: 0 0 25px rgba(74, 74, 138, 0.7);
+        }
+        .action-btn {
+            transition: all 0.3s ease;
+            border-width: 2px;
+            border-style: solid;
+        }
+        .action-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px currentColor;
+        }
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-explore { border-color: #34d399; color: #34d399; }
+        .btn-anomaly { border-color: #60a5fa; color: #60a5fa; }
+        .btn-visit { border-color: #f472b6; color: #f472b6; }
+        .btn-travel { border-color: #facc15; color: #facc15; }
+        .btn-work { border-color: #93c5fd; color: #93c5fd; }
+        .btn-comms { border-color: #a78bfa; color: #a78bfa; }
+        .btn-sleep { border-color: #c4b5fd; color: #c4b5fd; }
+        .btn-base { border-color: #fca5a5; color: #fca5a5; }
+
+        .inventory-item {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid #4a4a8a;
+            backdrop-filter: blur(5px);
+        }
+        .usable-item {
+            border-color: #2dd4bf;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .usable-item:hover {
+            box-shadow: 0 0 10px #2dd4bf;
+        }
+        .usable-item::after {
+            content: 'USE';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(45, 212, 191, 0.8);
+            color: #0c0a1a;
+            font-size: 10px;
+            font-weight: bold;
+            text-align: center;
+            padding: 1px 0;
+            transform: translateY(100%);
+            transition: transform 0.2s ease-in-out;
+        }
+        .usable-item:hover::after {
+            transform: translateY(0);
+        }
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background-color: #1a182a;
+            border: 2px solid #6a6aff;
+            box-shadow: 0 0 30px rgba(106, 106, 255, 0.5);
+        }
+        .log-message {
+            border-left: 3px solid #4a4a8a;
+            background: linear-gradient(90deg, rgba(74, 74, 138, 0.2), rgba(74, 74, 138, 0));
+        }
+        .stat-bar {
+            background-color: #2d3748; /* gray-800 */
+            border-radius: 9999px;
+            height: 0.625rem;
+            width: 100%;
+        }
+        .stat-bar-inner {
+            border-radius: 9999px;
+            height: 0.625rem;
+            transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
+        }
+        .switch {
+            width: 80px;
+            height: 40px;
+            background-color: #4a4a8a;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .switch.on {
+            background-color: #34d399;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="game" class="game-container max-w-7xl mx-auto p-4 md:p-6 rounded-2xl grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <!-- Header -->
+        <header class="lg:col-span-3 text-center p-4 rounded-xl border-2 border-dashed border-indigo-400/30 relative">
+            <h1 class="text-4xl md:text-5xl font-orbitron text-indigo-300 tracking-widest">SPACE LIFE</h1>
+            <div id="game-status" class="mt-4 flex flex-wrap justify-center items-center gap-x-4 md:gap-x-8 text-lg">
+                <div class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <span id="day-counter">Day: 1</span>
+                </div>
+                <div class="flex items-center">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-yellow-300" id="time-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    <span id="time-of-day">Daytime</span>
+                </div>
+                <div class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-red-400" id="condition-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span id="special-condition">Clear Skies</span>
+                </div>
+                 <div id="inspiration-container" class="flex items-center hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                    <span id="inspiration-text"></span>
+                </div>
+            </div>
+            <div class="absolute top-4 right-4 flex flex-col space-y-2">
+                <button onclick="saveGame()" class="p-1 px-3 rounded-lg text-sm bg-green-500/50 hover:bg-green-400/50">Save Game</button>
+                <button onclick="triggerLoadGame()" class="p-1 px-3 rounded-lg text-sm bg-blue-500/50 hover:bg-blue-400/50">Load Game</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="lg:col-span-2 space-y-4">
+            <!-- Planet Info -->
+            <div class="p-4 bg-black/20 rounded-lg border border-indigo-400/30">
+                <h2 class="text-2xl font-orbitron text-cyan-300">Current Location: <span id="planet-name"></span></h2>
+                <p id="planet-desc" class="mt-2 text-indigo-200/80"></p>
+                <p id="base-status-display" class="mt-2 text-sm text-cyan-200 font-semibold"></p>
+            </div>
+            <!-- Actions -->
+            <div class="p-4 bg-black/20 rounded-lg border border-indigo-400/30">
+                 <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-orbitron text-cyan-300">Actions</h2>
+                    <div id="actions-header-buttons"></div>
+                </div>
+                <div id="action-buttons" class="grid grid-cols-2 gap-4 mt-4">
+                    <!-- Action buttons are dynamically generated here -->
+                </div>
+            </div>
+            <!-- Log/Message Display -->
+            <div class="p-4 bg-black/20 rounded-lg border border-indigo-400/30 h-64 overflow-y-auto">
+                <h2 class="text-2xl font-orbitron text-cyan-300 mb-2">Ship's Log</h2>
+                <div id="log-display" class="space-y-2"></div>
+            </div>
+        </main>
+
+        <!-- Sidebar / Inventory -->
+        <aside class="lg:col-span-1 space-y-4">
+             <!-- Your Status -->
+            <div class="p-4 bg-black/20 rounded-lg border border-indigo-400/30">
+                <h2 class="text-2xl font-orbitron text-cyan-300">Your Status</h2>
+                <div class="mt-2 space-y-3">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1"><span>Health</span><span id="health-text">100 / 100</span></div>
+                        <div class="stat-bar"><div id="health-bar" class="stat-bar-inner"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm mb-1"><span>Sustenance</span><span id="sustenance-text">100 / 100</span></div>
+                        <div class="stat-bar"><div id="sustenance-bar" class="stat-bar-inner"></div></div>
+                    </div>
+                    <p>Equipment: <span id="equipment-display">None</span></p>
+                </div>
+            </div>
+             <!-- Ship Status -->
+            <div class="p-4 bg-black/20 rounded-lg border border-indigo-400/30">
+                <h2 class="text-2xl font-orbitron text-cyan-300">Starship Status</h2>
+                <div class="mt-2 space-y-3">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1"><span>Fuel</span><span id="fuel-text">100 / 100</span></div>
+                        <div class="stat-bar"><div id="fuel-bar" class="stat-bar-inner"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm mb-1"><span>Hull</span><span id="hull-text">100 / 100</span></div>
+                        <div class="stat-bar"><div id="hull-bar" class="stat-bar-inner"></div></div>
+                    </div>
+                    <p>Upgrades: <span id="upgrades-display">None</span></p>
+                </div>
+            </div>
+            <!-- Pinned Item -->
+            <div id="datapad-display" class="hidden p-4 bg-black/20 rounded-lg border border-indigo-400/30">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-orbitron text-cyan-300">Pinned Item</h2>
+                    <button onclick="unpinItem()" class="text-xs text-red-400 hover:text-red-300">[ Unpin ]</button>
+                </div>
+                <div id="datapad-content" class="mt-2 space-y-2"></div>
+            </div>
+            <!-- Inventory -->
+            <div class="p-4 bg-black/20 rounded-lg border border-indigo-400/30">
+                <div class="flex justify-between items-baseline">
+                    <h2 class="text-2xl font-orbitron text-cyan-300">Inventory</h2>
+                    <p id="aethel-credits-container" class="text-yellow-400 font-bold hidden">Aethel Credits: <span id="aethel-credits-display">0</span></p>
+                </div>
+                 <div class="mt-2">
+                    <h3 class="font-bold text-indigo-300">Consumables</h3>
+                    <div id="inventory-consumables" class="grid grid-cols-3 gap-2 mt-1"></div>
+                </div>
+                <div class="mt-2">
+                    <h3 class="font-bold text-indigo-300">Materials</h3>
+                    <div id="inventory-materials" class="grid grid-cols-3 gap-2 mt-1"></div>
+                </div>
+                <div class="mt-4">
+                    <h3 class="font-bold text-indigo-300">Tools</h3>
+                    <div id="inventory-tools" class="grid grid-cols-3 gap-2 mt-1"></div>
+                </div>
+                 <div class="mt-4">
+                    <h3 class="font-bold text-indigo-300">Key Items</h3>
+                    <div id="inventory-key-items" class="grid grid-cols-3 gap-2 mt-1"></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div id="modal-content" class="modal-content rounded-xl p-6 w-11/12 md:max-w-2xl">
+            <h3 id="modal-title" class="text-2xl font-orbitron text-cyan-300"></h3>
+            <div id="modal-body" class="mt-4 text-indigo-200 max-h-[60vh] overflow-y-auto"></div>
+            <div id="modal-buttons" class="mt-6 flex justify-end space-x-4"></div>
+        </div>
+    </div>
+    
+    <input type="file" id="load-game-input" class="hidden" accept=".json" onchange="handleFileLoad(event)">
+
+    <script>
+        const initialGameState = {
+            day: 1,
+            timeOfDay: 'Day', // 'Day' or 'Night'
+            nightActionTaken: false,
+            fuel: 100,
+            hull: 100,
+            aethelCredits: 0,
+            player: {
+                health: 100,
+                maxHealth: 100,
+                sustenance: 100,
+                maxSustenance: 100,
+                weapon: null
+            },
+            inventory: {
+                materials: {},
+                tools: {},
+                keyItems: {},
+                consumables: {}
+            },
+            recipes: {
+                'Geo-Scanner': { desc: "Allows safe navigation of energized flora.", materials: { 'Scrap Metal': 10, 'Circuit Board': 2, 'Crystal Shard': 5 }, makes: { type: 'tools', name: 'Geo-Scanner' } },
+                'Laser Cutter': { desc: "A tool modified for defense. Better than nothing.", materials: { 'Scrap Metal': 10, 'Crystal Shard': 5, 'Energy Geode': 1 }, makes: { type: 'tools', name: 'Laser Cutter' } },
+                'Reinforced Drill': { desc: "Drill capable of piercing super-dense ice.", materials: { 'Titanium Ore': 5, 'Obsidian Shard': 3, 'Energy Geode': 2 }, makes: { type: 'tools', name: 'Reinforced Drill' } },
+                'Atmo-Sensor': { desc: "Calibrated to track biological trails in gas giants.", materials: { 'Circuit Board': 3, 'Gas Blossom': 5, 'Scrap Metal': 5 }, makes: { type: 'tools', name: 'Atmo-Sensor' } },
+                'Med Pack': { desc: "A standard-issue medical kit. Restores health.", materials: { 'Glow Moss': 3, 'Xylosian Beetle': 1 }, makes: { type: 'consumables', name: 'Med Pack' } },
+                'Nutri-Paste': { desc: "Nutrient slurry. Tastes awful but very filling.", materials: { 'Glow Moss': 2, 'Salt Crystals': 3 }, makes: { type: 'consumables', name: 'Nutri-Paste' } },
+                'Range Booster': { desc: "Improves engine efficiency, allowing travel to distant worlds.", materials: { 'Titanium Ore': 5, 'Energy Geode': 3, 'Circuit Board': 3 }, makes: { type: 'upgrades', name: 'range' } },
+                'Resonance Key': { desc: "A strange device that hums in harmony with ancient tech.", materials: { 'Ancient Tech Scrap': 5, 'Energy Geode': 2, 'Time-warped Crystal': 1 }, makes: { type: 'keyItems', name: 'Resonance Key' } },
+                'Stealth Salve': { desc: "A shimmering paste that masks your scent from predators.", materials: { 'Moon Salt': 2, 'Shadow Fern': 1 }, makes: { type: 'consumables', name: 'Stealth Salve'} },
+                'Hull Patch': { desc: "A quick-seal patch for minor hull breaches.", materials: { 'Iron Berries': 3, 'Sulfur Deposits': 2 }, makes: { type: 'consumables', name: 'Hull Patch'} },
+                'Coolant System': { desc: "Reinforces the hull against micrometeoroid impacts.", materials: { 'Cryo-crystals': 2, 'Leviathan Heartstone': 1, 'Scrap Metal': 15 }, makes: { type: 'upgrades', name: 'coolant'} }
+            },
+            upgrades: {
+                range: 0,
+                scanner: 0,
+                coolant: 0,
+            },
+            currentPlanet: 'Xylos',
+            specialCondition: { name: 'None', effect: null },
+            inspiration: null, // { item: 'Crystal Shard', planet: 'Xylos' }
+            pinnedItem: null,
+            flags: {
+                guaranteedAnomaly: false,
+                aethelMarketUnlocked: false,
+                strangerJoined: false,
+                resourceBonus: null, // { planet: 'Xylos', region: 'Crystal Caverns', day: 2 }
+                echoDriveAttemptedToday: false,
+                cookedToday: false,
+                guaranteedFlee: false,
+            },
+            knownTraders: {
+                'Xylos': false,
+                'Krylar': false,
+                'Aethel': false, // This planet has a market, not a regular trader
+                'Ouroboros': false
+            },
+            dailyReportEvents: [],
+            travelCosts: {
+                'Xylos-Krylar': 20, 'Xylos-Aethel': 40, 'Xylos-Ouroboros': 60,
+                'Krylar-Aethel': 30, 'Krylar-Ouroboros': 50, 'Aethel-Ouroboros': 30,
+            },
+            planets: {
+                'Xylos': {
+                    name: 'Xylos',
+                    desc: 'A verdant world with shimmering crystal formations and vast, quiet salt flats. The air hums with latent energy.',
+                    unlocked: true,
+                    base: {
+                        progress: 0, site: null, crewQuarters: false, expansion: false,
+                        crew: { vilda: 'not_found' },
+                        siteOptions: [
+                            { id: 'geode', name: 'Rocky Overhang', desc: 'A stable, defensible position near rich geode deposits.', bonus: 'Minerals' },
+                            { id: 'food', name: 'Near Critter Burrows', desc: 'Close to a network of burrows for small, edible creatures.', bonus: 'Sustenance' }
+                        ],
+                        buildCosts: { 
+                            1: { 'Scrap Metal': 15 }, // Establish Camp
+                            2: { 'Scrap Metal': 25, 'Crystal Shard': 10 }, // Establish Base
+                            3: { 'Scrap Metal': 15, 'Bio-luminescent Wood': 5 }, // Crew Quarters
+                            'farm': { 'Glimmerfruit': 10, 'Voltroot': 10, 'Scrap Metal': 10 } // Farm
+                        },
+                        expansionName: 'Build a Farm'
+                    },
+                    creatures: [
+                        { name: 'Crystal Crawler', chance: 0.15, health: 30, damage: [5, 10], noWeaponDamage: [70, 90], loot: {'Crystal Shard': 2, 'Crawler Leg': 1} }
+                    ],
+                    specialConditions: [ { name: 'Ion Storm', chance: 0.15, effect: 'anomaly_boost' }, { name: 'Spore Bloom', chance: 0.1, effect: 'explore_bio_boost' } ],
+                    lifeformEvents: [
+                        { type: 'gift', text: "A shy, crystalline creature approaches, observes you, and leaves behind a shimmering geode as a gift.", item: {type: 'materials', name: 'Energy Geode', qty: 1} },
+                        { type: 'danger', text: "Aggressive, thorny vines lash out from the ground! You manage to dodge but they seem to guard the deeper parts of the wilds.", hint: 'unlocks Ancient Forest' }
+                    ],
+                    trader: { name: 'Scrap-Collector Trik', chance: 0.3, wares: [ 
+                        { item: {type: 'materials', name: 'Circuit Board', desc: "Complex electronic components."}, cost: {'Crystal Shard': 8} }, 
+                        { item: {type: 'materials', name: 'Fuel Cell', desc: "A dense, single-use power source."}, cost: {'Scrap Metal': 8} }, 
+                        { item: {type: 'consumables', name: 'Nutri-Paste', desc: "Restores all sustenance. Vile taste."}, cost: {'Glow Moss': 3} },
+                        { item: {type: 'materials', name: 'Circuit Board', desc: "Complex electronic components."}, cost: {'Mutated Spore': 2} } 
+                    ] },
+                    regions: [
+                        { name: 'Crystal Caverns', unlocked: true, dayFinds: {'Crystal Shard': 3, 'Energy Geode': 1, 'Glimmerfruit': 2}, nightFinds: {'Glow Moss': 2, 'Crystal Shard': 1} },
+                        { name: 'Salt Plateaus', unlocked: false, unlockHint: 'A strange beast was seen nesting here.', dayFinds: {'Salt Crystals': 4, 'Xylosian Beetle': 1}, nightFinds: {'Moon Salt': 2} },
+                        { name: 'Ancient Forest', unlocked: false, unlockHint: 'Requires a Geo-Scanner to navigate the dense, energy-rich flora.', dayFinds: {'Bio-luminescent Wood': 2, 'Voltroot': 2 }, nightFinds: {'Shadow Fern': 1, 'Energy Geode': 1} }
+                    ]
+                },
+                'Krylar': {
+                    name: 'Krylar',
+                    desc: 'A barren, rocky moon battered by cosmic winds. Its deep craters are said to hold rare metallic ores.',
+                    unlocked: false,
+                    base: {
+                        progress: 0, site: null, crewQuarters: false, expansion: false,
+                        crew: { sansady: 'not_found' },
+                        siteOptions: [
+                             { id: 'geothermal', name: 'Geothermal Fissure', desc: 'Tap into the moon\'s core heat to find rare minerals.', bonus: 'Energy' },
+                             { id: 'magnetic', name: 'Magnetic Field Conflux', desc: 'Set up collectors in this high-flux area to gather ores.', bonus: 'Ores' }
+                        ], 
+                        buildCosts: { 1: { 'Iron Ore': 5, 'Scrap Metal': 5 }, 2: {'Titanium Ore': 5, 'Scrap Metal': 15}, 3: {'Iron Ore': 10, 'Scrap Metal': 10}, 'mine': {'Titanium Ore': 10, 'Energy Geode': 3} },
+                        expansionName: 'Build a Mine'
+                    },
+                     creatures: [
+                        { name: 'Scrap Skitter', chance: 0.2, health: 40, damage: [8, 15], noWeaponDamage: [70, 90], loot: {'Scrap Metal': 3, 'Iron Ore': 2} },
+                        { name: 'Stone Scuttler', chance: 0.1, health: 50, damage: [10, 18], noWeaponDamage: [70, 90], loot: {'Scuttler Meat': 1, 'Iron Ore': 1} }
+                    ],
+                    specialConditions: [ { name: 'Meteor Shower', chance: 0.2, effect: 'explore_meteor' }, { name: 'Magnetic Flux', chance: 0.1, effect: 'explore_rare_boost' } ],
+                    lifeformEvents: [
+                        { type: 'neutral', text: "You encounter a silicon-based 'rock-herd'. They ignore you, grinding minerals from the surface." },
+                        { type: 'trade', text: "A hulking, rocky creature gestures to a fissure in the ground, then points at your ship's metal hull. It seems to want to trade.", offer: { give: 'Titanium Ore', qty: 1}, want: { item: 'Scrap Metal', qty: 10} }
+                    ],
+                    trader: { name: 'Prospector Grokk', chance: 0.4, wares: [ 
+                        { item: {type: 'materials', name: 'Titanium Ore', desc: "A strong, lightweight metal."}, cost: {'Iron Ore': 4} }, 
+                        { item: {type: 'keyItems', name: 'Nav-Chart: Volcanic Vents', desc: "Maps a safe path through unstable terrain."}, cost: {'Energy Geode': 3} }, 
+                        { item: {type: 'keyItems', name: 'Garbled Comm Address', desc: "Coordinates from a faint, repeating signal."}, cost: {'Iron Ore': 2} },
+                        { item: {type: 'upgrades', name: 'Advanced Scanner Module', desc: "Improves anomaly detection rates."}, cost: {'Titanium Ore': 10, 'Energy Geode': 5} },
+                        { item: {type: 'materials', name: 'Titanium Ore', desc: "A strong, lightweight metal."}, cost: {'Meteorite Fragment': 2} }
+                    ] },
+                    regions: [
+                        { name: 'Impact Crater', unlocked: true, dayFinds: {'Iron Ore': 3, 'Scrap Metal': 2, 'Iron Berries': 2}, nightFinds: {'Titanium Ore': 1, 'Scrap Metal': 3, 'Med Pack': 1} },
+                        { name: 'Volcanic Vents', unlocked: false, unlockHint: 'The path is unstable. A navigational chart is needed.', dayFinds: {'Sulfur Deposits': 3}, nightFinds: {'Obsidian Shard': 2, 'Titanium Ore': 1} },
+                        { name: 'Frozen Core', unlocked: false, unlockHint: 'Requires a Reinforced Drill to pierce the ice shelf.', dayFinds: {}, nightFinds: {'Cryo-crystals': 1} }
+                    ]
+                },
+                 'Aethel': {
+                    name: 'Aethel',
+                    desc: 'A gas giant with floating islands of solidified clouds. Strange flora and fauna thrive in its perpetual twilight.',
+                    unlocked: false,
+                    creatures: [
+                        { name: 'Sky Manta', chance: 0.15, health: 60, damage: [12, 20], noWeaponDamage: [70, 90], loot: {'Manta Fillet': 1, 'Aether-moss': 2} }
+                    ],
+                    base: {
+                        progress: 0, site: null, crewQuarters: false, expansion: false,
+                        crew: { zael: 'not_found' },
+                        siteOptions: [
+                            { id: 'aeroplankton', name: 'Aeroplankton Current', desc: 'Deploy nets to catch nutrient-rich sky-plankton.', bonus: 'Atmospheric Food' },
+                            { id: 'stormcatcher', name: 'Storm Spire', desc: 'Build a spire to generate tradeable energy credits.', bonus: 'Credits' }
+                        ], 
+                        buildCosts: { 1: { 'Aether-moss': 10, 'Scrap Metal': 5 }, 2: {'Gas Blossom': 5, 'Scrap Metal': 15}, 3: {'Aether-moss': 15}, 'shop': {'Circuit Board': 5, 'Aether-moss': 10} },
+                        expansionName: 'Build a Shop'
+                    },
+                    specialConditions: [ { name: 'Torrential Rain', chance: 0.25, effect: 'explore_less' } ],
+                    lifeformEvents: [
+                        { type: 'gift', text: "A swarm of docile, floating sky-jellies surround you, pulsing with soft light. One of them drifts closer and drops a condensed gas blossom.", item: {type: 'materials', name: 'Gas Blossom', qty: 1} },
+                        { type: 'market', text: "You follow a trail of shimmering exhaust to a bustling trade hub nestled on a large floating island. You've discovered the Aethel Sky-Market.", hint: 'unlocks market'},
+                        { type: 'crew', text: "At the edge of the market, you see a cloaked figure being harassed by enforcers over a debt. They notice you and give a slight nod.", crew: 'zael'}
+                    ],
+                    market: { name: 'Aethel Sky-Market', wares: [ 
+                        { item: {type: 'materials', name: 'Condensed Lightning', desc: "Raw atmospheric energy."}, cost: {'Aethel Credits': 50} }, 
+                        { item: {type: 'materials', name: 'Leviathan Heartstone', desc: "The fossilized heart of a great sky-beast."}, cost: {'Aethel Credits': 100} }, 
+                        { item: {type: 'keyItems', name: 'Distress Beacon Coordinates', desc: "Coordinates of a powerful, ancient distress call."}, cost: {'Aethel Credits': 15} },
+                        { item: {type: 'materials', name: 'Fuel Cell', desc: "A dense, single-use power source."}, cost: {'Aethel Credits': 25} } 
+                    ] },
+                    regions: [
+                        { name: 'Floating Archipelago', unlocked: true, dayFinds: {'Aether-moss': 3, 'Gas Blossom': 1, 'Sky-Plankton Cluster': 1, 'Aethel Credits': 5}, nightFinds: {'Aether-moss': 4, 'Aethel Credits': 3} },
+                        { name: 'Storm Core', unlocked: false, unlockHint: 'Requires a specialized ship upgrade to withstand the atmospheric pressure.', dayFinds: {'Condensed Lightning': 1}, nightFinds: {'Condensed Lightning': 2} },
+                        { name: 'Sky-Leviathan Graveyard', unlocked: false, unlockHint: 'Requires an Atmo-Sensor to track the migration paths.', dayFinds: {'Ancient Bones': 2, 'Leviathan Heartstone': 1}, nightFinds: {'Ancient Bones': 3} }
+                    ]
+                },
+                'Ouroboros': {
+                    name: 'Ouroboros',
+                    desc: 'A shattered planet, its fragments held in a delicate orbital dance around a dead star. It is rumored to be the site of a great cataclysm.',
+                    unlocked: false,
+                    base: {
+                        progress: 0, site: null, crewQuarters: false, expansion: false,
+                        crew: { durah: 'not_found' },
+                        siteOptions: [
+                            { id: 'debris', name: 'Orbital Debris Field', desc: 'Establish an observation post to track and salvage passing wreckage.', bonus: 'Salvage' },
+                            { id: 'temporal', name: 'Temporal Echo Zone', desc: 'Construct a stabilizer in a zone of temporal flux.', bonus: 'Temporal' }
+                        ], 
+                        buildCosts: { 1: { 'Scrap Metal': 20, 'Ancient Tech Scrap': 2 }, 2: {'Ancient Tech Scrap': 5, 'Scrap Metal': 10}, 3: {'Scrap Metal': 25}, 'research': {'Ancient Tech Scrap': 10, 'Circuit Board': 5} },
+                        expansionName: 'Build Research Outpost'
+                    },
+                     specialConditions: [ { name: 'Temporal Rift', chance: 0.05, effect: 'explore_temporal' } ],
+                     lifeformEvents: [ 
+                         { type: 'combat', creatureName: 'Shrouded Stranger', text: 'A figure in a dusty cloak stands amidst the wreckage, their face obscured by shadow. As you approach, they draw a wicked-looking blade. They don\'t seem interested in talking.' },
+                         { type: 'combat', creatureName: 'Temporal Hound', text: 'A creature shimmering with temporal energy fades into existence before you.' },
+                         { type: 'neutral', text: 'There is no life here. Only a profound, echoing silence.' }
+                     ],
+                     trader: { name: 'The Archivist', chance: 0.2, wares: [ 
+                        { item: {type: 'materials', name: 'Time-warped Crystal', desc: "A crystal unstuck from the flow of time."}, cost: {'Condensed Lightning': 5, 'Energy Geode': 5} }, 
+                        { item: {type: 'keyItems', name: 'Nav-Chart: Singularity Edge', desc: "Data to navigate the system's core."}, cost: {'Ancient Tech Scrap': 10} },
+                        { item: {type: 'materials', name: 'Ancient Tech Scrap', desc: "Salvage from a long-dead civilization."}, cost: {'Ancient Bones': 5} }
+                        ], 
+                        specialWare: {
+                            condition: () => gameState.planets.Ouroboros.base.progress >= 2 && gameState.flags.strangerJoined,
+                            ware: { item: {type: 'keyItems', name: 'Echo Drive Casing', desc: "The final piece of the drive, kept safe by the Archivist."}, cost: {'Ancient Tech Scrap': 20} }
+                        }
+                    },
+                    regions: [
+                        { name: 'The Void Wreckage', unlocked: true, dayFinds: {'Scrap Metal': 5, 'Ancient Tech Scrap': 1}, nightFinds: {'Scrap Metal': 5, 'Ancient Tech Scrap': 2} },
+                        { name: 'Singularity Edge', unlocked: false, unlockHint: 'Its location is hidden within temporal distortions.', dayFinds: {}, nightFinds: {'Time-warped Crystal': 1} },
+                        { name: 'The Silent Archive', unlocked: false, unlockHint: 'The final destination. Requires the Resonance Key.', dayFinds: {}, nightFinds: {} }
+                    ]
+                }
+            },
+            creatures: {
+                'Shrouded Stranger': { name: 'Shrouded Stranger', health: 120, damage: [15, 25], noWeaponDamage: [70, 90], loot: {'Ancient Tech Scrap': 3}, special: 'stranger_defeat' },
+                'Temporal Hound': { name: 'Temporal Hound', health: 80, damage: [18, 28], noWeaponDamage: [70, 90], loot: {'Ectoplasmic Core': 1, 'Ancient Tech Scrap': 1} }
+            },
+            goal: {
+                partsFound: 0,
+                parts: ['Echo Drive Casing', 'Echo Drive Core', 'Echo Drive Modulator'],
+                totalParts: 3
+            }
+        };
+
+        let gameState = JSON.parse(JSON.stringify(initialGameState));
+
+        const sellPrices = {
+            // Materials
+            'Scrap Metal': 1, 'Crystal Shard': 2, 'Energy Geode': 5, 'Glow Moss': 1, 'Circuit Board': 4,
+            'Xylosian Beetle': 2, 'Salt Crystals': 1, 'Glimmerfruit': 2, 'Voltroot': 2, 'Bio-luminescent Wood': 3,
+            'Iron Ore': 2, 'Titanium Ore': 4, 'Obsidian Shard': 3, 'Sulfur Deposits': 2, 'Meteorite Fragment': 6,
+            'Aether-moss': 2, 'Gas Blossom': 3, 'Ancient Bones': 4, 'Ancient Tech Scrap': 8, 'Time-warped Crystal': 15,
+            'Crawler Leg': 1, 'Scuttler Meat': 2, 'Manta Fillet': 3, 'Ectoplasmic Core': 5,
+            'Moon Salt': 2, 'Shadow Fern': 3, 'Iron Berries': 1, 'Cryo-crystals': 10, 'Mutated Spore': 3,
+            // Consumables
+            'Med Pack': 10, 'Nutri-Paste': 8, 'Cooked Leg': 5, 'Grilled Scuttler': 8, 'Seared Fillet': 12, 'Energized Gel': 18,
+            'Fish Pastry': 10, 'Hull Patch': 6
+        };
+
+
+        // DOM Elements
+        const dayCounter = document.getElementById('day-counter');
+        const timeOfDay = document.getElementById('time-of-day');
+        const specialCondition = document.getElementById('special-condition');
+        const timeIcon = document.getElementById('time-icon');
+        const conditionIcon = document.getElementById('condition-icon');
+        const planetNameEl = document.getElementById('planet-name');
+        const planetDesc = document.getElementById('planet-desc');
+        const baseStatusDisplay = document.getElementById('base-status-display');
+        const actionButtons = document.getElementById('action-buttons');
+        const actionsHeaderButtons = document.getElementById('actions-header-buttons');
+        const logDisplay = document.getElementById('log-display');
+        
+        const fuelText = document.getElementById('fuel-text');
+        const fuelBar = document.getElementById('fuel-bar');
+        const hullText = document.getElementById('hull-text');
+        const hullBar = document.getElementById('hull-bar');
+        const healthText = document.getElementById('health-text');
+        const healthBar = document.getElementById('health-bar');
+        const sustenanceText = document.getElementById('sustenance-text');
+        const sustenanceBar = document.getElementById('sustenance-bar');
+        
+        const upgradesDisplay = document.getElementById('upgrades-display');
+        const equipmentDisplay = document.getElementById('equipment-display');
+        const aethelCreditsDisplay = document.getElementById('aethel-credits-display');
+        const aethelCreditsContainer = document.getElementById('aethel-credits-container');
+        const inventoryMaterials = document.getElementById('inventory-materials');
+        const inventoryTools = document.getElementById('inventory-tools');
+        const inventoryKeyItems = document.getElementById('inventory-key-items');
+        const inventoryConsumables = document.getElementById('inventory-consumables');
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalButtons = document.getElementById('modal-buttons');
+        const datapadDisplay = document.getElementById('datapad-display');
+        const datapadContent = document.getElementById('datapad-content');
+        const inspirationContainer = document.getElementById('inspiration-container');
+        const inspirationText = document.getElementById('inspiration-text');
+
+        function init() {
+            // No auto-load on start, user must click Load Game button.
+            logMessage("Your starship is stranded in an uncharted star system. The primary long-range communicator is offline. You must find the three missing components of the 'Echo Drive' in order to jump to a different system. Scour the system, upgrade your ship, and brave the unknown. The fate of your mission rests on your shoulders.", "system");
+            updateUI();
+        }
+
+        function updateUI() {
+            dayCounter.textContent = `Day: ${gameState.day}`;
+            timeOfDay.textContent = gameState.timeOfDay;
+            specialCondition.textContent = gameState.specialCondition.name;
+            if (gameState.timeOfDay === 'Day') {
+                timeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />`;
+                timeIcon.classList.add('text-yellow-300');
+                timeIcon.classList.remove('text-indigo-300');
+            } else {
+                timeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
+                timeIcon.classList.remove('text-yellow-300');
+                timeIcon.classList.add('text-indigo-300');
+            }
+            
+            const currentPlanetData = gameState.planets[gameState.currentPlanet];
+            planetNameEl.textContent = currentPlanetData.name;
+            planetDesc.textContent = currentPlanetData.desc;
+            updateBaseUI(currentPlanetData);
+
+            // Update player stats
+            updateStatBar('health', gameState.player.health, gameState.player.maxHealth);
+            updateStatBar('sustenance', gameState.player.sustenance, gameState.player.maxSustenance);
+            updateStatBar('fuel', gameState.fuel, 100);
+            updateStatBar('hull', gameState.hull, 100);
+            
+            if (gameState.aethelCredits > 0 || gameState.flags.aethelMarketUnlocked) {
+                aethelCreditsContainer.classList.remove('hidden');
+                aethelCreditsDisplay.textContent = gameState.aethelCredits;
+            } else {
+                aethelCreditsContainer.classList.add('hidden');
+            }
+
+
+            if (gameState.inventory.tools['Laser Cutter']) gameState.player.weapon = 'Laser Cutter';
+            equipmentDisplay.textContent = gameState.player.weapon || 'None';
+
+            if (gameState.inspiration && gameState.inspiration.planet === gameState.currentPlanet && gameState.inspiration.item) {
+                inspirationContainer.classList.remove('hidden');
+                inspirationText.textContent = `Inspired: Find ${gameState.inspiration.item}`;
+            } else {
+                inspirationContainer.classList.add('hidden');
+            }
+
+            renderActions();
+            renderUpgrades();
+            renderInventory();
+            renderDatapad();
+            
+        }
+
+        function updateStatBar(stat, current, max) {
+            const textEl = document.getElementById(`${stat}-text`);
+            const barEl = document.getElementById(`${stat}-bar`);
+            if(!textEl || !barEl) return;
+
+            textEl.textContent = `${current} / ${max}`;
+            const percentage = (current / max) * 100;
+            barEl.style.width = `${percentage}%`;
+
+            barEl.classList.remove('bg-green-500', 'bg-yellow-500', 'bg-red-500');
+            if (percentage > 50) {
+                barEl.classList.add('bg-green-500');
+            } else if (percentage > 25) {
+                barEl.classList.add('bg-yellow-500');
+            } else {
+                barEl.classList.add('bg-red-500');
+            }
+        }
+        
+        function renderActions() {
+            actionButtons.innerHTML = '';
+            
+            if (gameState.timeOfDay === 'Night' && gameState.nightActionTaken) {
+                const button = document.createElement('button');
+                button.textContent = 'Get Some Sleep';
+                button.className = `lg:col-span-2 action-btn p-3 rounded-lg font-bold text-lg btn-sleep`;
+                button.onclick = () => {
+                    actionButtons.querySelectorAll('button').forEach(b => b.disabled = true);
+                    getSomeSleep();
+                };
+                actionButtons.appendChild(button);
+                return;
+            }
+
+            const planet = gameState.planets[gameState.currentPlanet].name;
+                actions = [];
+            if (gameState.timeOfDay === 'Day') {
+                actions = [
+                    { name: `Explore ${planet}`, class: 'btn-explore', handler: () => showRegionSelect('Day') },
+                    { name: 'Check for Anomalies', class: 'btn-anomaly', handler: checkAnomalies },
+                    { name: 'Visit Local Lifeforms', class: 'btn-visit', handler: visitLocals },
+                    { name: 'Travel', class: 'btn-travel', handler: showTravelModal }
+                ];
+            } else {
+                 const baseProgress = gameState.planets[gameState.currentPlanet].base.progress;
+                 let baseAction;
+                 if (baseProgress === 0) {
+                      baseAction = { name: 'Scout for Campsite', class: 'btn-base', handler: showCampsiteScoutModal };
+                 } else if (baseProgress === 1) {
+                      baseAction = { name: 'Construct Camp', class: 'btn-base', handler: showBaseConstructionModal };
+                 } else {
+                      baseAction = { name: 'Expand Base', class: 'btn-base', handler: showBaseExpansionModal };
+                 }
+
+                actions = [
+                    { name: `Explore ${planet}`, class: 'btn-explore', handler: () => showRegionSelect('Night') },
+                    { name: 'Work on Starship', class: 'btn-work', handler: showStarshipModal },
+                    { name: 'Check Communicator', class: 'btn-comms', handler: showCommunicatorModal },
+                    baseAction
+                ];
+            }
+
+            actions.forEach(action => {
+                const button = document.createElement('button');
+                button.textContent = action.name;
+                button.className = `action-btn p-3 rounded-lg font-bold text-lg ${action.class}`;
+                button.onclick = () => {
+                    actionButtons.querySelectorAll('button').forEach(b => b.disabled = true);
+                    action.handler();
+                };
+                actionButtons.appendChild(button);
+            });
+        }
+
+        function renderInventory() {
+            inventoryMaterials.innerHTML = '';
+            inventoryTools.innerHTML = '';
+            inventoryKeyItems.innerHTML = '';
+            inventoryConsumables.innerHTML = '';
+
+            for (const item in gameState.inventory.consumables) {
+                const isUsable = true; // All consumables are usable
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `inventory-item p-2 rounded text-center ${isUsable ? 'usable-item' : ''}`;
+                itemDiv.title = item;
+                itemDiv.innerHTML = `<span class="font-bold">${gameState.inventory.consumables[item]}</span><br><span class="text-xs">${item}</span>`;
+                if(isUsable) {
+                    itemDiv.onclick = () => useItem(item, 'consumables');
+                }
+                inventoryConsumables.appendChild(itemDiv);
+            }
+            for (const item in gameState.inventory.materials) {
+                inventoryMaterials.innerHTML += `<div class="inventory-item p-2 rounded text-center" title="${item}"><span class="font-bold">${gameState.inventory.materials[item]}</span><br><span class="text-xs">${item}</span></div>`;
+            }
+            for (const item in gameState.inventory.tools) {
+                inventoryTools.innerHTML += `<div class="inventory-item p-2 rounded text-center" title="${item}"><span class="font-bold text-cyan-300">${item}</span></div>`;
+            }
+             for (const item in gameState.inventory.keyItems) {
+                inventoryKeyItems.innerHTML += `<div class="inventory-item p-2 rounded text-center" title="${item}"><span class="font-bold text-yellow-300">${item}</span></div>`;
+            }
+        }
+
+        function renderUpgrades() {
+            const installed = [];
+            if (gameState.upgrades.range > 0) installed.push('Range Booster');
+            if (gameState.upgrades.scanner > 0) installed.push('Advanced Scanner');
+            if (gameState.upgrades.coolant > 0) installed.push('Coolant System');
+            
+            if (installed.length > 0) {
+                upgradesDisplay.textContent = installed.join(', ');
+            } else {
+                upgradesDisplay.textContent = 'None';
+            }
+        }
+
+        function renderDatapad() {
+            if (gameState.pinnedItem) {
+                datapadDisplay.classList.remove('hidden');
+                const { itemName, source, location, cost } = gameState.pinnedItem;
+                let costHTML = '';
+                for (const mat in cost) {
+                    const required = cost[mat];
+                    const isCurrency = mat === 'Aethel Credits';
+                    const current = isCurrency ? gameState.aethelCredits : (gameState.inventory.materials[mat] || 0);
+                    const color = current >= required ? 'text-green-400' : 'text-red-400';
+                    costHTML += `<li class="${color}">${mat}: ${current} / ${required}</li>`;
+                }
+
+                datapadContent.innerHTML = `
+                    <h3 class="font-bold text-lg text-cyan-300">${itemName}</h3>
+                    <p class="text-sm text-indigo-300">Source: ${source} on ${location}</p>
+                    <ul class="text-sm list-disc list-inside">${costHTML}</ul>
+                `;
+            } else {
+                datapadDisplay.classList.add('hidden');
+            }
+        }
+
+        function logMessage(message, type = 'info') {
+            const color = { info: 'text-indigo-300', success: 'text-green-400', warning: 'text-yellow-400', danger: 'text-red-400', system: 'text-cyan-300 font-bold' }[type];
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-message p-2 ${color}`;
+            logEntry.innerHTML = message; // Use innerHTML to allow for bolding etc.
+            logDisplay.prepend(logEntry);
+        }
+
+        function addToReport(message) {
+            gameState.dailyReportEvents.push(message);
+        }
+
+        function showDailyReport() {
+            if (gameState.dailyReportEvents.length === 0) return;
+            
+            const consolidated = {};
+            const otherEvents = [];
+
+            gameState.dailyReportEvents.forEach(event => {
+                const parts = event.split(' ');
+                const operator = parts[0];
+                const value = parseInt(parts[1], 10);
+
+                if ((operator === '+' || operator === '-') && !isNaN(value)) {
+                    const key = parts.slice(2).join(' ');
+                    if (!consolidated[key]) {
+                        consolidated[key] = 0;
+                    }
+                    consolidated[key] += (operator === '+' ? value : -value);
+                } else {
+                    otherEvents.push(event);
+                }
+            });
+
+            modalTitle.textContent = `End of Day ${gameState.day - 1} Report`;
+            let bodyHTML = '<ul class="list-disc list-inside space-y-1">';
+            
+            for (const key in consolidated) {
+                const totalValue = consolidated[key];
+                if (totalValue === 0) continue;
+                
+                const operator = totalValue > 0 ? '+' : '-';
+                const value = Math.abs(totalValue);
+                const color = operator === '+' ? 'text-green-400' : 'text-red-400';
+                bodyHTML += `<li class="${color}">${operator} ${value} ${key}</li>`;
+            }
+            
+            otherEvents.forEach(event => {
+                 bodyHTML += `<li class="text-indigo-200">${event}</li>`;
+            });
+
+            if (gameState.inspiration && gameState.inspiration.item) {
+                bodyHTML += `<li class="text-cyan-300 mt-2 pt-2 border-t border-indigo-400/20"><b>Inspiration:</b> You have a sudden insight on how to find more <b>${gameState.inspiration.item}</b>.</li>`;
+            }
+
+            bodyHTML += '</ul>';
+            modalBody.innerHTML = bodyHTML;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-blue-600/50 hover:bg-blue-500/70 rounded" onclick="closeModal()">Continue</button>`;
+            
+            gameState.dailyReportEvents = [];
+            openModal();
+        }
+
+        function addCredits(amount) {
+            gameState.aethelCredits += amount;
+            addToReport(`+ ${amount} Aethel Credits`);
+        }
+
+        function addItem(type, name, quantity = 1) {
+            if (!gameState.inventory[type][name]) gameState.inventory[type][name] = 0;
+            gameState.inventory[type][name] += quantity;
+            addToReport(`+ ${quantity} ${name}`);
+            renderInventory();
+        }
+
+        function removeItem(type, name, quantity = 1) {
+            if (gameState.inventory[type] && gameState.inventory[type][name] >= quantity) {
+                gameState.inventory[type][name] -= quantity;
+                if (gameState.inventory[type][name] <= 0) delete gameState.inventory[type][name];
+                addToReport(`- ${quantity} ${name}`);
+                renderInventory();
+                return true;
+            }
+            return false;
+        }
+        
+        function hasItems(costObject) {
+            if (costObject['Aethel Credits']) {
+                if(gameState.aethelCredits < costObject['Aethel Credits']) return false;
+            }
+            for (const item in costObject) {
+                 if (item === 'Aethel Credits') continue;
+                if (!gameState.inventory.materials[item] || gameState.inventory.materials[item] < costObject[item]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function spendItems(costObject) {
+            if (!hasItems(costObject)) return false;
+            
+            if (costObject['Aethel Credits']) {
+                gameState.aethelCredits -= costObject['Aethel Credits'];
+                addToReport(`- ${costObject['Aethel Credits']} Aethel Credits`);
+            }
+            
+            for (const item in costObject) {
+                if (item !== 'Aethel Credits') {
+                     removeItem('materials', item, costObject[item]);
+                }
+            }
+            return true;
+        }
+        
+        function applyPassiveBonuses() {
+            Object.values(gameState.planets).forEach(planet => {
+                if (planet.base.progress >= 2) {
+                    let multiplier = planet.base.progress > 2 ? 1.5 : 1;
+                    if(planet.base.expansion) multiplier = 2.5;
+
+                    switch(planet.base.site) {
+                        case 'geode':
+                            if (Math.random() < 0.25 * multiplier) addItem('materials', 'Energy Geode', 1);
+                            break;
+                        case 'food':
+                            const foodBonus = Math.floor(10 * multiplier);
+                            gameState.player.sustenance = Math.min(gameState.player.maxSustenance, gameState.player.sustenance + foodBonus);
+                            addToReport(`+ ${foodBonus} Sustenance (Passive Traps)`);
+                            break;
+                        case 'geothermal':
+                            if (Math.random() < 0.2 * multiplier) addItem('materials', 'Energy Geode', 1);
+                            break;
+                        case 'magnetic':
+                            if (Math.random() < 0.3 * multiplier) addItem('materials', 'Titanium Ore', 1);
+                            break;
+                        case 'aeroplankton':
+                             const planktonBonus = Math.floor(15 * multiplier);
+                            gameState.player.sustenance = Math.min(gameState.player.maxSustenance, gameState.player.sustenance + planktonBonus);
+                            addToReport(`+ ${planktonBonus} Sustenance (Aeroplankton Nets)`);
+                            break;
+                        case 'stormcatcher':
+                            addCredits(Math.floor(10 * multiplier));
+                            break;
+                        case 'debris':
+                             if (Math.random() < 0.4 * multiplier) addItem('materials', 'Scrap Metal', 2);
+                             if (Math.random() < 0.1 * multiplier) addItem('materials', 'Ancient Tech Scrap', 1);
+                            break;
+                        case 'temporal':
+                              if (Math.random() < 0.05 * multiplier) addItem('materials', 'Time-warped Crystal', 1);
+                            break;
+                    }
+                }
+            });
+            // Hired Crew Bonuses
+            if(gameState.planets.Krylar.base.crew.sansady === 'hired' && Math.random() < 0.25) { addItem('materials', 'Titanium Ore', 1); logMessage("Sansady found some Titanium Ore on a scouting flight.", "success"); }
+        }
+
+        function applySustenanceCost() {
+            gameState.player.sustenance = Math.max(0, gameState.player.sustenance - 15);
+            addToReport(`- 15 Sustenance`);
+            
+            if (gameState.player.sustenance <= 0) {
+                const healthLoss = 10;
+                gameState.player.health = Math.max(0, gameState.player.health - healthLoss);
+                logMessage("Starvation is setting in. You lose 10 health.", "danger");
+                addToReport(`- ${healthLoss} Health (Starvation)`);
+                if (gameState.player.health <= 0) {
+                    playerDefeated();
+                    return true; // Returns true if player is defeated
+                }
+            }
+            return false; // Returns false if player is fine
+        }
+
+        function advanceTime(isNightAction = false) {
+            if (isNightAction) {
+                gameState.nightActionTaken = true;
+                if (applySustenanceCost()) return; // Stop if player was defeated by starvation
+                updateUI();
+                return;
+            }
+            
+            if (gameState.timeOfDay === 'Day') {
+                if (applySustenanceCost()) return; // Stop if player was defeated by starvation
+                gameState.timeOfDay = 'Night';
+                if (gameState.flags.guaranteedAnomaly) {
+                    logMessage("The signal from the supply cache has faded. The opportunity is lost.", "warning");
+                    gameState.flags.guaranteedAnomaly = false;
+                }
+                 if (gameState.flags.resourceBonus && gameState.day >= gameState.flags.resourceBonus.day) {
+                    logMessage(`The resource spike in the ${gameState.flags.resourceBonus.region} has subsided.`, 'warning');
+                    gameState.flags.resourceBonus = null;
+                }
+            } else {
+                // This is now only for sleeping
+                gameState.day++;
+                gameState.timeOfDay = 'Day';
+                gameState.flags.cookedToday = false;
+                gameState.flags.echoDriveAttemptedToday = false;
+                applyPassiveBonuses();
+                showDailyReport();
+                rollForSpecialCondition();
+            }
+            updateUI();
+        }
+        
+        function rollForSpecialCondition() {
+            const planetData = gameState.planets[gameState.currentPlanet];
+            gameState.specialCondition = { name: 'Clear Skies', effect: null };
+            if (planetData.specialConditions) {
+                for (const condition of planetData.specialConditions) {
+                    if (Math.random() < condition.chance) {
+                        gameState.specialCondition = { name: condition.name, effect: condition.effect };
+                        logMessage(`A <b>${condition.name}</b> has started on ${planetData.name}!`, 'warning');
+                        if (condition.effect === 'explore_meteor') { // Meteor shower has a chance to damage hull on new day
+                            if (Math.random() < 0.3) {
+                                const damage = Math.floor(Math.random() * 10) + 5;
+                                gameState.hull = Math.max(1, gameState.hull - damage);
+                                logMessage(`The ship was struck by a stray meteor! Hull: -${damage}`, 'danger');
+                                addToReport(`- ${damage} Hull (Meteor)`);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // --- ACTION HANDLERS ---
+        
+        function showRegionSelect(time) {
+            const planetData = gameState.planets[gameState.currentPlanet];
+            modalTitle.textContent = `Explore ${planetData.name}`;
+            
+            let bodyHTML = '<p>Select a region to explore:</p><div class="space-y-2 mt-4">';
+            planetData.regions.forEach((region, index) => {
+                let canExplore = true;
+                let reason = '';
+                let bonus = '';
+
+                if (index === 2) { // Third region of any planet
+                    if (planetData.name === 'Xylos' && !gameState.inventory.tools['Geo-Scanner']) { canExplore = false; reason = '(Requires Geo-Scanner)'; }
+                    else if (planetData.name === 'Krylar' && !gameState.inventory.tools['Reinforced Drill']) { canExplore = false; reason = '(Requires Reinforced Drill)'; } 
+                    else if (planetData.name === 'Aethel' && !gameState.inventory.tools['Atmo-Sensor']) { canExplore = false; reason = '(Requires Atmo-Sensor)'; } 
+                    else if (planetData.name === 'Ouroboros' && !gameState.inventory.keyItems['Resonance Key']) { canExplore = false; reason = '(Requires Resonance Key)'; }
+                }
+
+                if (gameState.flags.resourceBonus && gameState.flags.resourceBonus.planet === planetData.name && gameState.flags.resourceBonus.region === region.name) {
+                    bonus = `<span class="text-green-400 font-bold ml-2">(Rich Resources!)</span>`;
+                }
+
+                if (region.unlocked) {
+                    bodyHTML += `<button class="w-full text-left p-3 ${canExplore ? 'bg-indigo-900/50 hover:bg-indigo-800/70' : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'}" ${canExplore ? `onclick="exploreRegion(${index}, '${time}')"` : 'disabled'}>${region.name} ${bonus} <span class="text-sm ${canExplore ? 'text-gray-400' : 'text-red-400'}">${reason}</span></button>`;
+                } else {
+                     bodyHTML += `<div class="w-full text-left p-3 bg-gray-800/50 rounded-lg text-gray-500" title="${region.unlockHint}">Undiscovered Location</div>`;
+                }
+            });
+            bodyHTML += '</div>';
+            modalBody.innerHTML = bodyHTML;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">Cancel</button>`;
+            openModal();
+        }
+
+        function exploreRegion(regionIndex, time) {
+            closeModal(false);
+            const planetData = gameState.planets[gameState.currentPlanet];
+            
+            // Crew Discovery
+            if (planetData.name === 'Krylar' && planetData.regions[regionIndex].name === 'Volcanic Vents' && planetData.base.crew.sansady === 'not_found' && Math.random() < 0.15) {
+                findSansady();
+                return;
+            }
+
+            let encounterChanceModifier = gameState.flags.strangerJoined ? 0.5 : 1.0;
+            if (planetData.creatures) {
+                for (const creature of planetData.creatures) {
+                    if (Math.random() < creature.chance * encounterChanceModifier) {
+                        startCombat(creature);
+                        return; 
+                    }
+                }
+            }
+
+            const region = planetData.regions[regionIndex];
+            let finds = JSON.parse(JSON.stringify(time === 'Day' ? region.dayFinds : region.nightFinds));
+
+            logMessage(`Exploring the <b>${region.name}</b>...`, 'info');
+            
+            let foundItemsLog = [];
+            let modifier = 1.0;
+            let resourceBonusApplied = false;
+
+             if (gameState.flags.resourceBonus && gameState.flags.resourceBonus.planet === planetData.name && gameState.flags.resourceBonus.region === region.name) {
+                modifier = 2.0;
+                resourceBonusApplied = true;
+                logMessage(`The data packet was accurate! This area is rich with resources.`, 'system');
+            }
+
+            const conditionEffect = gameState.specialCondition.effect;
+            if (conditionEffect === 'explore_less') { modifier = 0.5; logMessage("The torrential rain makes searching difficult.", "warning"); }
+            if (conditionEffect === 'explore_bio_boost') { addItem('materials', 'Mutated Spore', 1); foundItemsLog.push('1 Mutated Spore'); }
+            if (conditionEffect === 'explore_rare_boost' && Math.random() < 0.25) { addItem('materials', 'Ancient Tech Scrap', 1); foundItemsLog.push('1 Ancient Tech Scrap'); }
+            if (conditionEffect === 'explore_meteor' && Math.random() < 0.3) { addItem('materials', 'Meteorite Fragment', 1); foundItemsLog.push('1 Meteorite Fragment'); }
+            if (conditionEffect === 'explore_temporal') { addItem('materials', 'Time-warped Crystal', 1); foundItemsLog.push('1 Time-warped Crystal'); logMessage("The rift destabilizes reality, revealing a strange crystal.", "system"); }
+
+            for (const item in finds) {
+                const numToFind = finds[item];
+                let actualFound = 0;
+                for(let i = 0; i < numToFind; i++) {
+                    if (Math.random() > 0.4) actualFound++;
+                }
+                
+                if (actualFound > 0) {
+                    if (gameState.inspiration && gameState.inspiration.item === item && gameState.inspiration.planet === gameState.currentPlanet) {
+                        logMessage(`Inspired insight pays off! You found double the amount of <b>${item}</b>!`, 'system');
+                        actualFound *= 2;
+                    }
+
+                    actualFound = Math.floor(actualFound * modifier);
+
+                    if (item === 'Aethel Credits') {
+                        addCredits(actualFound);
+                    } else {
+                        const itemType = (['Med Pack', 'Nutri-Paste', 'Glimmerfruit', 'Voltroot', 'Iron Berries', 'Sky-Plankton Cluster', 'Cooked Leg', 'Wrapped Parcel', 'Fish Pastry'].includes(item)) ? 'consumables' : 'materials';
+                        addItem(itemType, item, actualFound);
+                    }
+                    foundItemsLog.push(`${actualFound} ${item}`);
+                }
+            }
+            
+            if (resourceBonusApplied) {
+                gameState.flags.resourceBonus = null;
+            }
+
+            if (foundItemsLog.length > 0) {
+                logMessage(`You found: <b>${foundItemsLog.join(', ')}</b>.`, 'success');
+            } else {
+                logMessage('You searched the area but found nothing of interest.', 'warning');
+            }
+            
+            if (planetData.name === 'Ouroboros' && region.name === 'The Silent Archive') {
+                if (gameState.inventory.keyItems['Resonance Key']) {
+                    logMessage('The Resonance Key hums in your hand, unlocking a hidden compartment in the archive!', 'system');
+                    const missingPart = 'Echo Drive Modulator';
+                    if (!gameState.inventory.keyItems[missingPart]) {
+                        addItem('keyItems', missingPart, 1);
+                        gameState.goal.partsFound++;
+                        logMessage(`You found the <b>${missingPart}</b>!`, 'success');
+                    }
+                } else {
+                    logMessage('You find a strange, sealed archive that seems to hum with a silent energy. You need a special tool to open it.', 'warning');
+                }
+            }
+
+            advanceTime(time === 'Night');
+        }
+        
+        function checkAnomalies() {
+             if (gameState.flags.guaranteedAnomaly) {
+                logMessage("The coded message leads you directly to a hidden supply cache!", 'system');
+                addItem('materials', 'Scrap Metal', 5);
+                addItem('materials', 'Fuel Cell', 1);
+                addItem('consumables', 'Med Pack', 1);
+                logMessage(`You found: <b>5 Scrap Metal, 1 Fuel Cell, 1 Med Pack</b>.`, 'success');
+                gameState.flags.guaranteedAnomaly = false;
+                advanceTime();
+                return;
+            }
+
+            logMessage("Scanning for local anomalies...", 'info');
+            setTimeout(() => {
+                let roll = Math.random();
+                if (gameState.upgrades.scanner > 0) roll += 0.15; 
+                const conditionEffect = gameState.specialCondition.effect;
+                let eventHandled = false;
+
+                 if (gameState.currentPlanet === 'Xylos' && gameState.planets.Xylos.base.crew.vilda === 'not_found' && roll > 0.9) {
+                    findVilda();
+                    eventHandled = true;
+                }
+
+                if (!eventHandled) {
+                    if (conditionEffect === 'anomaly_boost' && roll < 0.5) {
+                        logMessage("The Ion Storm is causing wild energy fluctuations! You manage to isolate a strong signal.", "system");
+                        const techRoll = Math.random();
+                        if (techRoll > 0.6) { logMessage("It's a fully charged fuel cell, ejected from a freighter!", "success"); addItem('materials', 'Fuel Cell', 1); }
+                        else { logMessage("You trace the signal to a damaged cargo pod containing intact circuit boards.", "success"); addItem('materials', 'Circuit Board', 3); }
+                    } else if (roll > 0.85) {
+                        logMessage("Anomaly detected! You've found a sealed nav-computer from a wreck. It contains a chart for a new region on this planet!", 'success');
+                        processAcquaintanceMessage(true);
+                    } else if (roll > 0.65) {
+                        logMessage("A strong energy signature leads you to a jettisoned fuel cell. A lucky find!", 'success');
+                        addItem('materials', 'Fuel Cell', 1);
+                    } else if (roll > 0.4) {
+                        logMessage("A faint energy signature leads you to a downed survey drone. You salvage some parts.", 'success');
+                        addItem('materials', 'Scrap Metal', 3);
+                        addItem('materials', 'Circuit Board', 1);
+                    } else if (gameState.currentPlanet === 'Aethel' && roll > 0.2) {
+                        const creditsFound = Math.floor(Math.random() * 10) + 5;
+                        logMessage(`You detected a faint ghost signal from a defunct trade beacon. You manage to extract ${creditsFound} Aethel Credits.`, 'success');
+                        addCredits(creditsFound);
+                    }
+                    else {
+                        logMessage("The scanners picked up some interference, but it was just cosmic background radiation.", 'warning');
+                    }
+                     advanceTime();
+                }
+            }, 1500);
+        }
+
+        function visitLocals() {
+            if (gameState.player.sustenance <= 0 && Math.random() < 0.33) {
+                logMessage("In your weakened state, you stumble through the landscape. A shrouded figure approaches and wordlessly hands you a small, wrapped parcel before disappearing into the gloom.", "system");
+                addItem('consumables', 'Wrapped Parcel', 1);
+                advanceTime();
+                return;
+            }
+
+            logMessage("You send out a hail to any local lifeforms...", 'info');
+            const planetData = gameState.planets[gameState.currentPlanet];
+
+            setTimeout(() => {
+                const eventPool = planetData.lifeformEvents.filter(e => e.type !== 'combat');
+                const crewEvent = eventPool.find(e => e.type === 'crew');
+                
+                if (crewEvent && planetData.base.crew[crewEvent.crew] === 'not_found' && Math.random() < 0.25) {
+                    findZael();
+                    return;
+                }
+                
+                // Prioritize combat events if they exist
+                const combatEvents = planetData.lifeformEvents.filter(e => e.type === 'combat');
+                if (combatEvents.length > 0) {
+                     // Special case for Ouroboros stranger encounter
+                    const strangerEvent = combatEvents.find(e => e.creatureName === 'Shrouded Stranger');
+                    if (strangerEvent && !gameState.flags.strangerJoined) {
+                        logMessage(strangerEvent.text, 'danger');
+                        startCombat(gameState.creatures[strangerEvent.creatureName]);
+                        return;
+                    }
+                    
+                    const otherCombatEvent = combatEvents.find(e => e.creatureName !== 'Shrouded Stranger');
+                    if (otherCombatEvent && Math.random() < 0.2) {
+                        logMessage(otherCombatEvent.text, 'danger');
+                        startCombat(gameState.creatures[otherCombatEvent.creatureName]);
+                        return;
+                    }
+                }
+                
+                const trader = planetData.trader;
+                if (trader && Math.random() < trader.chance) {
+                    if (!gameState.knownTraders[gameState.currentPlanet]) {
+                        gameState.knownTraders[gameState.currentPlanet] = true;
+                        logMessage(`You've made contact with <b>${trader.name}</b>. You can now reach them on the communicator at night.`, 'system');
+                    }
+                    showTraderModal(trader);
+                    return;
+                }
+
+                if (eventPool.length > 0) {
+                    const event = eventPool[Math.floor(Math.random() * eventPool.length)];
+                    logMessage(event.text, 'info');
+                    if (event.item) {
+                        addItem(event.item.type, event.item.name, event.item.qty);
+                        logMessage(`You received <b>${event.item.qty} ${event.item.name}</b>.`, 'success');
+                    }
+                    if (event.hint) {
+                        if (event.hint.includes('unlocks market')) {
+                            gameState.flags.aethelMarketUnlocked = true;
+                            logMessage(`The Sky-Market is now a known contact.`, 'system');
+                        }
+                        if (event.hint.includes('unlocks')) {
+                            const regionToUnlock = event.hint.replace('unlocks ', '');
+                            const region = planetData.regions.find(r => r.name === regionToUnlock);
+                            if(region && !region.unlocked) {
+                                region.unlocked = true;
+                                if (regionToUnlock === 'Ancient Forest') {
+                                    logMessage(`You've marked the location of the <b>Ancient Forest</b>, but its energy signature is too dense to navigate safely without a Geo-Scanner.`, 'system');
+                                } else {
+                                    logMessage(`The event has revealed a new location: <b>${region.name}</b>!`, 'system');
+                                }
+                                addToReport(`Unlocked ${regionToUnlock}`);
+                            }
+                        }
+                    }
+                } else {
+                    logMessage("You wait for a response, but the planet remains silent.", 'warning');
+                }
+                advanceTime();
+            }, 1500);
+        }
+        
+        function formatCostString(cost) {
+             if (cost['Aethel Credits']) {
+                const current = gameState.aethelCredits;
+                return `${cost['Aethel Credits']} Aethel Credits (${current}/${cost['Aethel Credits']})`;
+            }
+            return Object.entries(cost).map(([mat, qty]) => {
+                const current = gameState.inventory.materials[mat] || 0;
+                return `${mat} (${current}/${qty})`;
+            }).join(', ');
+        }
+
+        function showTraderModal(source, fromCommunicator = false) {
+            modalTitle.textContent = `Trading with ${source.name}`;
+            let bodyHTML = `<p class="mb-4">"${source.name} hails you. 'Looking to trade?'"</p><div class="space-y-2">`;
+            
+            let waresToShow = [...source.wares];
+            if (source.specialWare && source.specialWare.condition()) {
+                waresToShow.push(source.specialWare.ware);
+            }
+
+            waresToShow.forEach((ware, index) => {
+                const costString = formatCostString(ware.cost);
+                const canAfford = hasItems(ware.cost);
+                const itemName = ware.item.name;
+                const itemType = ware.item.type;
+                
+                let isPinned = gameState.pinnedItem && gameState.pinnedItem.itemName === itemName;
+
+                let isOwned = false;
+                if (itemType === 'tools' && gameState.inventory.tools[itemName]) isOwned = true;
+                if (itemType === 'upgrades' && gameState.upgrades[ware.item.name.split(' ')[1]?.toLowerCase()]) isOwned = true;
+                if (itemType === 'keyItems' && gameState.inventory.keyItems[itemName]) isOwned = true;
+                
+                if (isOwned) return;
+                
+                const pinButton = isPinned ? 
+                    `<button class="p-2 px-3 rounded text-sm bg-red-600/50 hover:bg-red-500/70" onclick="unpinItem(true)">Unpin</button>` :
+                    `<button class="p-2 px-3 rounded text-sm bg-purple-600/50 hover:bg-purple-500/70" onclick="pinItemToDatapad('${source.name}', ${index})">Pin</button>`;
+
+                bodyHTML += `<div class="p-3 bg-black/20 rounded-lg flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-lg text-cyan-300">${itemName}</p>
+                        <p class="text-sm text-indigo-300">${ware.item.desc}</p>
+                        <p class="text-sm">Cost: ${costString}</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        ${pinButton}
+                        <button class="p-2 px-3 rounded text-sm ${canAfford ? 'bg-green-600/50 hover:bg-green-500/70' : 'bg-gray-600/50 cursor-not-allowed'}" ${canAfford ? `onclick='buyItem(${JSON.stringify(ware)}, "${source.name}", ${fromCommunicator})'` : 'disabled'}>Buy</button>
+                    </div>
+                </div>`;
+            });
+
+            bodyHTML += `</div>`;
+            let footerButtons = '';
+            if (source.name === 'Aethel Sky-Market') {
+                footerButtons += `<button class="p-2 px-4 bg-yellow-600/50 hover:bg-yellow-500/70 rounded" onclick="showSellModal()">Sell Items</button>`;
+            }
+            footerButtons += fromCommunicator ?
+                `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">End Transmission</button>` :
+                `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModalAndAdvance()">Leave</button>`;
+            
+            modalBody.innerHTML = bodyHTML;
+            modalButtons.innerHTML = footerButtons;
+            
+            openModal();
+        }
+
+        function buyItem(ware, sourceName, fromCommunicator = false) {
+            if (spendItems(ware.cost)) {
+                const item = ware.item;
+                logMessage(`You acquired <b>${item.name}</b>.`, 'success');
+                if (item.type === 'upgrades') {
+                    if (item.name === 'Advanced Scanner Module') gameState.upgrades.scanner = 1;
+                    else if (item.name === 'Coolant System') gameState.upgrades.coolant = 1;
+                } else if (item.name.startsWith('Nav-Chart: ')) {
+                    const regionName = item.name.replace('Nav-Chart: ', '');
+                    const region = gameState.planets[gameState.currentPlanet].regions.find(r => r.name === regionName);
+                    if (region) {
+                        region.unlocked = true;
+                        logMessage(`The chart reveals the location of <b>${regionName}</b>!`, 'system');
+                        addToReport(`Unlocked ${regionName}`);
+                    }
+                } else {
+                    addItem(item.type, item.name, 1);
+                    if (item.type === 'keyItems' && gameState.goal.parts.includes(item.name)) {
+                        gameState.goal.partsFound++;
+                    }
+                }
+                
+                const source = Object.values(gameState.planets).map(p => p.trader || p.market).find(s => s && s.name === sourceName);
+                if (source) showTraderModal(source, fromCommunicator);
+                
+                renderDatapad();
+                renderUpgrades();
+            }
+        }
+
+        function showSellModal() {
+            modalTitle.textContent = "Sell Items at Sky-Market";
+            let hasSellable = false;
+            let bodyHTML = '<div class="space-y-2">';
+
+            const processCategory = (category) => {
+                for(const item in gameState.inventory[category]) {
+                    if(sellPrices[item]) {
+                        hasSellable = true;
+                        const amount = gameState.inventory[category][item];
+                        const price = sellPrices[item];
+                        bodyHTML += `
+                            <div class="p-3 bg-black/20 rounded-lg flex justify-between items-center">
+                                <div>
+                                    <p class="font-bold text-lg text-cyan-300">${item}</p>
+                                    <p class="text-sm text-indigo-300">Owned: ${amount} | Value: ${price} Credits Each</p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button class="p-2 px-3 rounded text-sm bg-yellow-600/50 hover:bg-yellow-500/70" onclick="sellItem('${item}', 1, '${category}')">Sell 1</button>
+                                    ${amount >= 5 ? `<button class="p-2 px-3 rounded text-sm bg-yellow-700/50 hover:bg-yellow-600/70" onclick="sellItem('${item}', 5, '${category}')">Sell 5</button>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            };
+            
+            processCategory('materials');
+            processCategory('consumables');
+
+            if (!hasSellable) {
+                bodyHTML += '<p>You have no valuable items to sell.</p>';
+            }
+
+            bodyHTML += '</div>';
+            modalBody.innerHTML = bodyHTML;
+            modalButtons.innerHTML = `
+                <button class="p-2 px-4 bg-blue-600/50 hover:bg-blue-500/70 rounded" onclick="showTraderModal(gameState.planets.Aethel.market, true)">Back to Buy</button>
+                <button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">End Transmission</button>
+            `;
+            openModal();
+        }
+
+        function sellItem(itemName, quantity, category) {
+            const price = sellPrices[itemName];
+            if(price && gameState.inventory[category][itemName] >= quantity) {
+                removeItem(category, itemName, quantity);
+                // removeItem adds a negative report, let's remove it for a cleaner sell report
+                gameState.dailyReportEvents.pop(); 
+
+                const creditsGained = price * quantity;
+                addCredits(creditsGained);
+                // addCredits adds a positive report, let's remove it and add a custom one
+                gameState.dailyReportEvents.pop();
+                addToReport(`Sold ${quantity} ${itemName} for ${creditsGained} Credits`);
+
+                logMessage(`Sold ${quantity} ${itemName} for ${creditsGained} Aethel Credits.`, 'success');
+                showSellModal(); // Refresh the sell modal
+            }
+        }
+        
+        function pinItemToDatapad(sourceName, index, isRecipe = false) {
+            let item;
+            if (isRecipe) {
+                const recipeName = sourceName;
+                const recipe = gameState.recipes[recipeName];
+                item = { itemName: recipeName, source: 'Fabricator', location: 'Base', cost: recipe.materials };
+            } else {
+                const source = gameState.planets[gameState.currentPlanet].trader || gameState.planets[gameState.currentPlanet].market;
+                
+                let waresToShow = [...source.wares];
+                if (source.specialWare && source.specialWare.condition()) {
+                    waresToShow.push(source.specialWare.ware);
+                }
+                const ware = waresToShow[index];
+                item = { itemName: ware.item.name, source: source.name, location: gameState.currentPlanet, cost: ware.cost };
+            }
+            
+            gameState.pinnedItem = item;
+            logMessage(`<b>${item.itemName}</b> pinned to Datapad.`, 'system');
+            
+            if (isRecipe) showCraftingModal(true);
+            else {
+                const source = gameState.planets[gameState.currentPlanet].trader || gameState.planets[gameState.currentPlanet].market;
+                showTraderModal(source);
+            }
+            renderDatapad();
+        }
+
+        function unpinItem(refreshModal = false) {
+            if (gameState.pinnedItem) {
+                const sourceName = gameState.pinnedItem.source;
+                logMessage(`<b>${gameState.pinnedItem.itemName}</b> unpinned from Datapad.`, 'system');
+                gameState.pinnedItem = null;
+                
+                if(refreshModal) {
+                    if(sourceName === 'Fabricator') showCraftingModal();
+                    else {
+                        const source = Object.values(gameState.planets).map(p => p.trader || p.market).find(s => s && s.name === sourceName);
+                        if(source) showTraderModal(source);
+                    }
+                }
+                renderDatapad();
+            }
+        }
+
+        function getTravelCost(origin, destination) {
+            const key1 = `${origin}-${destination}`;
+            const key2 = `${destination}-${origin}`;
+            return gameState.travelCosts[key1] || gameState.travelCosts[key2] || 999;
+        }
+
+        function showTravelModal() {
+            modalTitle.textContent = 'Travel to another Planet';
+            let bodyHTML = `<p>Current Fuel: ${gameState.fuel}. Select a destination:</p><div class="space-y-2 mt-4">`;
+            if(gameState.hull < 25) {
+                bodyHTML = '<p class="text-red-400 font-bold">Hull integrity is critical! Ship is unsafe for travel. You must repair to at least 25 hull.</p>';
+            } else {
+                for (const planetKey in gameState.planets) {
+                    const p = gameState.planets[planetKey];
+                    if (p.name !== gameState.currentPlanet && p.unlocked) {
+                        const cost = getTravelCost(gameState.currentPlanet, p.name);
+                        let canTravel = gameState.fuel >= cost;
+                        let reason = '';
+
+                        if (p.name === 'Ouroboros' && gameState.upgrades.range < 1) {
+                            canTravel = false;
+                            reason = '(Requires Range Booster)';
+                        }
+                        
+                        bodyHTML += `<button class="w-full text-left p-3 ${canTravel ? 'bg-indigo-900/50 hover:bg-indigo-800/70' : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'}" ${canTravel ? `onclick="travelTo('${p.name}')"` : 'disabled'}>${p.name} (Cost: ${cost} Fuel) <span class="text-sm text-red-400">${reason}</span></button>`;
+                    }
+                }
+            }
+             bodyHTML += '</div>';
+            modalBody.innerHTML = bodyHTML;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">Cancel</button>`;
+            openModal();
+        }
+        
+        function travelTo(planetName) {
+            closeModal(false);
+            const cost = getTravelCost(gameState.currentPlanet, planetName);
+
+            if (gameState.fuel >= cost) {
+                modalTitle.textContent = `Traveling to ${planetName}...`;
+                modalBody.innerHTML = `<div class="w-full bg-indigo-900 rounded-full h-2.5"><div class="bg-cyan-400 h-2.5 rounded-full animate-pulse"></div></div>`;
+                modalButtons.innerHTML = '';
+                openModal();
+                
+                setTimeout(() => {
+                    const travelRoll = Math.random();
+                    if (gameState.upgrades.coolant === 0) {
+                        if (travelRoll < 0.05) { // 5% chance of major impact
+                            const damage = Math.floor(Math.random() * 11) + 20; // 20-30 damage
+                            gameState.hull = Math.max(1, gameState.hull - damage);
+                            logMessage(`A large meteoroid impacts the ship during transit! Hull: -${damage}`, 'danger');
+                            addToReport(`- ${damage} Hull (Meteoroid Impact)`);
+                        } else if (travelRoll < 0.25) { // 20% chance of minor impact
+                            const damage = Math.floor(Math.random() * 6) + 3; // 3-8 damage
+                            gameState.hull = Math.max(1, gameState.hull - damage);
+                            logMessage(`Your ship was hit by micrometeoroids during transit! Hull: -${damage}`, 'danger');
+                            addToReport(`- ${damage} Hull (Micrometeoroids)`);
+                        }
+                    } else {
+                        logMessage("The Coolant System diverts excess heat to the shields, preventing any damage from micrometeoroids.", "system");
+                    }
+
+                    gameState.fuel -= cost;
+                    addToReport(`- ${cost} Fuel (Travel)`);
+                    gameState.currentPlanet = planetName;
+                    logMessage(`Arrived at <b>${planetName}</b>.`, 'system');
+                    
+                    gameState.day++;
+                    gameState.timeOfDay = 'Day';
+                    gameState.flags.cookedToday = false;
+                    applyPassiveBonuses();
+                    generateInspiration();
+                    showDailyReport();
+                    rollForSpecialCondition();
+                    
+                    closeModal(false);
+                    updateUI();
+                }, 1500);
+            } else {
+                logMessage("Not enough fuel to travel.", "danger");
+                updateUI();
+            }
+        }
+        
+        function showStarshipModal() {
+             if (gameState.goal.partsFound === gameState.goal.totalParts) {
+                const canAttempt = !gameState.flags.echoDriveAttemptedToday;
+                modalTitle.textContent = "Echo Drive Ready";
+                modalBody.innerHTML = `
+                    <div class="p-3 bg-green-900/50 rounded-lg">
+                        <p class="font-bold text-lg text-green-300">Initiate Echo Drive</p>
+                        <p class="text-sm text-green-200 mb-2">You have all the components. It's time to activate the drive and jump to the Giardium star system, where your true mission lies.</p>
+                        <button class="w-full mt-4 p-2 rounded text-sm ${canAttempt ? 'bg-green-600/50 hover:bg-green-500/70' : 'bg-gray-600/50 cursor-not-allowed'}" ${canAttempt ? 'onclick="startEchoDriveMinigame()"' : 'disabled'}>${canAttempt ? 'Begin Activation' : 'Recalibrating (Try Tomorrow)'}</button>
+                    </div>`;
+                modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">Wait</button>`;
+                openModal();
+                return;
+            }
+
+            modalTitle.textContent = "Work on Starship";
+            const hasFuelCell = gameState.inventory.materials['Fuel Cell'] && gameState.inventory.materials['Fuel Cell'] > 0;
+            const needsFuel = gameState.fuel < 100;
+            const canRefuel = hasFuelCell && needsFuel;
+            
+            const hasScrap = gameState.inventory.materials['Scrap Metal'] && gameState.inventory.materials['Scrap Metal'] >= 5;
+            const needsRepair = gameState.hull < 100;
+            const canRepair = hasScrap && needsRepair;
+
+            modalBody.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <h4 class="text-xl font-orbitron text-cyan-300">Repair Hull</h4>
+                        <p class="text-sm mb-2">Use 5 Scrap Metal to restore hull integrity.</p>
+                        <button class="w-full p-2 rounded ${canRepair ? 'bg-blue-600/50 hover:bg-blue-500/70' : 'bg-gray-600/50 cursor-not-allowed'}" ${canRepair ? 'onclick="repairShip()"' : 'disabled'}>Repair (5 Scrap)</button>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-orbitron text-cyan-300">Refuel Ship</h4>
+                        <p class="text-sm mb-2">Use 1 Fuel Cell to restore 25 fuel.</p>
+                        <button class="w-full p-2 rounded ${canRefuel ? 'bg-green-600/50 hover:bg-green-500/70' : 'bg-gray-600/50 cursor-not-allowed'}" ${canRefuel ? 'onclick="refuelShip()"' : 'disabled'}>Refuel (1 Fuel Cell)</button>
+                    </div>
+                </div>
+            `;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">Cancel</button>`;
+            openModal();
+        }
+
+        function repairShip() {
+            if (gameState.hull < 100 && removeItem('materials', 'Scrap Metal', 5)) {
+                const repairAmount = Math.floor(Math.random() * 10) + 15;
+                gameState.hull = Math.min(100, gameState.hull + repairAmount);
+                logMessage(`You use 5 Scrap Metal to patch the hull. Repaired <b>${repairAmount}</b> points.`, 'success');
+                addToReport(`+ ${repairAmount} Hull`);
+                closeModalAndAdvance(true);
+            }
+        }
+
+        function refuelShip() {
+            if (gameState.fuel < 100 && removeItem('materials', 'Fuel Cell', 1)) {
+                const refuelAmount = 25;
+                gameState.fuel = Math.min(100, gameState.fuel + refuelAmount);
+                logMessage(`You use a Fuel Cell. Restored <b>${refuelAmount}</b> fuel.`, 'success');
+                addToReport(`+ ${refuelAmount} Fuel`);
+                closeModalAndAdvance(true);
+            }
+        }
+
+        function showCraftingModal(fromBase = false) {
+            modalTitle.textContent = "Fabricator";
+            let bodyHTML = `<p class="mb-4">Select an item to craft.</p><div class="space-y-2">`;
+            
+            for (const recipeName in gameState.recipes) {
+                const recipe = gameState.recipes[recipeName];
+                const canCraft = hasItems(recipe.materials);
+                const costString = formatCostString(recipe.materials);
+                
+                let isCrafted = false;
+                if (recipe.makes.type === 'tools' || recipe.makes.type === 'keyItems') isCrafted = !!gameState.inventory[recipe.makes.type][recipe.makes.name];
+                else if (recipe.makes.type === 'upgrades') isCrafted = gameState.upgrades[recipe.makes.name] > 0;
+                
+                let isPinned = gameState.pinnedItem && gameState.pinnedItem.itemName === recipeName;
+                const pinButton = isPinned ? 
+                    `<button class="p-2 px-3 rounded text-sm bg-red-600/50 hover:bg-red-500/70" onclick="unpinItem(true)">Unpin</button>` :
+                    `<button class="p-2 px-3 rounded text-sm bg-purple-600/50 hover:bg-purple-500/70" onclick="pinItemToDatapad('${recipeName}', 0, true)">Pin</button>`;
+
+                if (isCrafted) {
+                     bodyHTML += `<div class="p-3 bg-gray-800/50 rounded-lg flex justify-between items-center text-gray-500">
+                        <div><p class="font-bold text-lg">${recipeName}</p><p class="text-sm">${recipe.desc}</p></div>
+                        <button class="p-2 px-4 rounded bg-gray-600/50 cursor-not-allowed" disabled>Crafted</button>
+                    </div>`;
+                } else {
+                    bodyHTML += `<div class="p-3 bg-black/20 rounded-lg">
+                        <div class="flex justify-between items-start">
+                            <div><p class="font-bold text-lg text-cyan-300">${recipeName}</p><p class="text-sm text-indigo-300">${recipe.desc}</p></div>
+                            <div class="flex space-x-2 flex-shrink-0 ml-4">${pinButton}<button class="p-2 px-3 rounded text-sm ${canCraft ? 'bg-green-600/50 hover:bg-green-500/70' : 'bg-gray-600/50 cursor-not-allowed'}" ${canCraft ? `onclick="craftItem('${recipeName}')"` : 'disabled'}>Craft</button></div>
+                        </div>
+                        <p class="text-sm mt-2">Requires: ${costString}</p>
+                    </div>`;
+                }
+            }
+
+            bodyHTML += `</div>`;
+            modalBody.innerHTML = bodyHTML;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">Close Fabricator</button>`;
+            if(!fromBase) openModal(); 
+        }
+        
+        function craftItem(recipeName) {
+            const recipe = gameState.recipes[recipeName];
+            if (recipe && spendItems(recipe.materials)) {
+                const item = recipe.makes;
+                logMessage(`Successfully crafted <b>${recipeName}</b>!`, 'success');
+                addToReport(`Crafted ${recipeName}`);
+
+                if (item.type === 'upgrades') {
+                    gameState.upgrades[item.name] = 1;
+                } else {
+                    gameState.dailyReportEvents.pop(); // remove the craft message
+                    addItem(item.type, item.name, 1);
+                }
+                
+                updateUI();
+                showCraftingModal(true);
+            }
+        }
+
+        function showCommunicatorModal() {
+            modalTitle.textContent = "Communicator";
+            let bodyHTML = `<p class="mb-4">Select an action.</p><div class="space-y-3">`;
+            bodyHTML += `<button onclick="searchForSignals()" class="w-full text-left p-3 bg-indigo-900/50 hover:bg-indigo-800/70 rounded-lg"><h4 class="font-bold text-cyan-300">Search for Signals</h4><p class="text-sm">Scan for broadcasts, distress calls, or data packets.</p></button>`;
+
+            const planetData = gameState.planets[gameState.currentPlanet];
+            if (gameState.knownTraders[gameState.currentPlanet] && planetData.trader) {
+                bodyHTML += `<button onclick="contactTrader()" class="w-full text-left p-3 bg-indigo-900/50 hover:bg-indigo-800/70 rounded-lg"><h4 class="font-bold text-cyan-300">Contact ${planetData.trader.name}</h4><p class="text-sm">Open a direct channel to trade.</p></button>`;
+            }
+            if (gameState.flags.aethelMarketUnlocked && gameState.currentPlanet === 'Aethel') {
+                 bodyHTML += `<button onclick="contactMarket()" class="w-full text-left p-3 bg-indigo-900/50 hover:bg-indigo-800/70 rounded-lg"><h4 class="font-bold text-cyan-300">Contact Aethel Sky-Market</h4><p class="text-sm">Connect to the market hub.</p></button>`;
+            }
+            if (gameState.currentPlanet === 'Krylar' && gameState.inventory.keyItems['Garbled Comm Address']) {
+                bodyHTML += `<button onclick="pingGarbledAddress()" class="w-full text-left p-3 bg-yellow-800/50 hover:bg-yellow-700/70 rounded-lg"><h4 class="font-bold text-yellow-300">Ping Garbled Address</h4><p class="text-sm">Attempt to decode and ping the strange coordinates.</p></button>`;
+            }
+            if (gameState.currentPlanet === 'Aethel' && gameState.inventory.keyItems['Distress Beacon Coordinates']) {
+                bodyHTML += `<button onclick="pingDistressBeacon()" class="w-full text-left p-3 bg-yellow-800/50 hover:bg-yellow-700/70 rounded-lg"><h4 class="font-bold text-yellow-300">Ping Distress Beacon</h4><p class="text-sm">Boost a signal to the distress beacon's origin point.</p></button>`;
+            }
+            // Crew call buttons
+            if (planetData.name === 'Xylos' && planetData.base.crew.vilda === 'known') bodyHTML += `<button onclick="contactVilda()" class="w-full text-left p-3 bg-teal-800/50 hover:bg-teal-700/70 rounded-lg"><h4 class="font-bold text-teal-300">Contact Vilda</h4><p class="text-sm">Call the gemstone appraiser.</p></button>`;
+            if (planetData.name === 'Krylar' && planetData.base.crew.sansady === 'known') bodyHTML += `<button onclick="contactSansady()" class="w-full text-left p-3 bg-teal-800/50 hover:bg-teal-700/70 rounded-lg"><h4 class="font-bold text-teal-300">Contact Sansady</h4><p class="text-sm">Call the winged explorer.</p></button>`;
+            if (planetData.name === 'Aethel' && planetData.base.crew.zael === 'known') bodyHTML += `<button onclick="contactZael()" class="w-full text-left p-3 bg-teal-800/50 hover:bg-teal-700/70 rounded-lg"><h4 class="font-bold text-teal-300">Contact Zael</h4><p class="text-sm">Call the indebted shopkeep.</p></button>`;
+
+
+            bodyHTML += `</div>`;
+            modalBody.innerHTML = bodyHTML;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">Cancel</button>`;
+            openModal();
+        }
+
+        function contactTrader() {
+            const planetData = gameState.planets[gameState.currentPlanet];
+            if (planetData.trader) {
+                closeModal(false); 
+                advanceTime(true); 
+                showTraderModal(planetData.trader, true);
+            }
+        }
+
+        function contactMarket() {
+            const market = gameState.planets['Aethel'].market;
+             if (market) {
+                closeModal(false); 
+                advanceTime(true); 
+                showTraderModal(market, true);
+            }
+        }
+
+        function searchForSignals() {
+            closeModal(false);
+            logMessage("You power up the short-range communicator...", 'info');
+             setTimeout(() => {
+                const roll = Math.random();
+                
+                // Prioritize discovering Krylar if it's not yet known
+                if (!gameState.planets['Krylar'].unlocked && roll > 0.4) { // 60% chance
+                    logMessage("A repeating signal from a mining guild database reveals the location of a resource-rich moon: Krylar.", 'system');
+                    addToReport(`Discovered planet Krylar`);
+                    gameState.planets['Krylar'].unlocked = true;
+                } else if (roll > 0.7) { // Coded message for supply cache
+                    logMessage("A coded message gives coordinates for a hidden supply cache. Your anomaly scanner should pick it up easily tomorrow.", 'success');
+                    gameState.flags.guaranteedAnomaly = true;
+                } else if (roll > 0.4) { // Acquaintance message for region unlock/bonus
+                     logMessage("An old acquaintance sends you a data packet.", 'success');
+                     processAcquaintanceMessage();
+                } else {
+                    logMessage("...static hiss. Nothing but the void.", 'warning');
+                }
+                advanceTime(true);
+            }, 1500);
+        }
+
+        function generateInspiration() {
+            const planetData = gameState.planets[gameState.currentPlanet];
+            const possibleItems = new Set(); 
+
+            const isRegionAccessible = (region) => {
+                if (region.name === 'Ancient Forest' && !gameState.inventory.tools['Geo-Scanner']) return false;
+                if (region.name === 'Frozen Core' && !gameState.inventory.tools['Reinforced Drill']) return false;
+                if (region.name === 'Sky-Leviathan Graveyard' && !gameState.inventory.tools['Atmo-Sensor']) return false;
+                if (region.name === 'The Silent Archive' && !gameState.inventory.keyItems['Resonance Key']) return false;
+                return true;
+            };
+
+            planetData.regions.forEach(region => {
+                if (region.unlocked && isRegionAccessible(region)) {
+                    Object.keys(region.dayFinds).forEach(item => possibleItems.add(item));
+                    Object.keys(region.nightFinds).forEach(item => possibleItems.add(item));
+                }
+            });
+
+            // Filter out items the player already has a lot of, or key items/tools
+            const itemList = Array.from(possibleItems).filter(item => !gameState.inventory.tools[item] && !gameState.inventory.keyItems[item] && item !== 'Aethel Credits');
+            
+            if (itemList.length > 0) {
+                const inspiredItem = itemList[Math.floor(Math.random() * itemList.length)];
+                gameState.inspiration = {
+                    item: inspiredItem,
+                    planet: gameState.currentPlanet
+                };
+            } else {
+                gameState.inspiration = null;
+            }
+        }
+        
+        function getSomeSleep() {
+             logMessage("You settle in for the night, letting your body recover.", 'info');
+            setTimeout(() => {
+                if (gameState.player.sustenance > 0) {
+                    const base = gameState.planets[gameState.currentPlanet].base;
+                    const healthRestored = base.crewQuarters ? 30 : 15;
+                    const actualHeal = Math.min(gameState.player.maxHealth - gameState.player.health, healthRestored);
+                    if (actualHeal > 0) {
+                        gameState.player.health += actualHeal;
+                        logMessage(`Your sleep is fitful, but you feel slightly better. Restored <b>${actualHeal}</b> health.`, 'success');
+                        addToReport(`+ ${actualHeal} Health (Sleep)`);
+                    }
+                } else {
+                    logMessage("You are too weak from hunger to recover any health.", "warning");
+                }
+
+                const potentialHints = [];
+                const currentPlanetData = gameState.planets[gameState.currentPlanet];
+
+                // Crew hints
+                if(currentPlanetData.base.progress >= 2) {
+                    if(currentPlanetData.name === 'Xylos' && currentPlanetData.base.crew.vilda === 'not_found') potentialHints.push("You dream of static and strange energy readings. An anomaly waiting to be found.");
+                    if(currentPlanetData.name === 'Krylar' && currentPlanetData.base.crew.sansady === 'not_found') potentialHints.push("A dream of intense heat and fire. You see a winged shape moving through the steam of volcanic vents.");
+                    if(currentPlanetData.name === 'Aethel' && currentPlanetData.base.crew.zael === 'not_found') potentialHints.push("You dream of a crowded marketplace, floating in the clouds. A cloaked figure is in some kind of trouble.");
+                    if(currentPlanetData.name === 'Ouroboros' && currentPlanetData.base.crew.durah === 'not_found') potentialHints.push("The silence of this shattered world fills your dreams. You feel a presence watching you, waiting to be challenged.");
+                }
+
+                if (!gameState.player.weapon) potentialHints.push("A nightmare of being cornered by a skittering creature. You fumble for a weapon, but your hands are empty. You need to be better prepared.");
+                if (gameState.player.sustenance < 40) potentialHints.push("You dream of strange fruits and glowing moss. Your stomach rumbles in your sleep. Survival depends on a full belly.");
+                if (!gameState.inventory.tools['Geo-Scanner']) potentialHints.push("You keep thinking about places just out of reach. There must be a way to build better scanning equipment to find them.");
+                if (Object.values(gameState.planets).every(p => p.base.progress === 0)) potentialHints.push("The vastness of space feels lonely. A dream of a small, safe shelter on a strange world brings a moment of peace. A base would make survival much easier.");
+                if (gameState.upgrades.range < 1 && gameState.planets['Ouroboros'].unlocked) potentialHints.push("The ship's nav-computer flashes a warning: The Ouroboros system is beyond your current fuel range. You'll need to boost the engine's efficiency to make the trip.");
+                if (!gameState.inventory.keyItems['Resonance Key']) potentialHints.push("You dream of a locked door with a strange, humming keyhole. You realize you might need to craft a special tool to access the deepest secrets of this place. The materials must be exotic... perhaps some are only found during strange weather, or in the most dangerous of places.");
+                
+                let hint;
+                if(potentialHints.length > 0) {
+                    hint = potentialHints[Math.floor(Math.random() * potentialHints.length)];
+                } else {
+                    hint = "The image of the 'Silent Archive' fills your mind. You know what you must do. The Resonance Key feels warm in your pocket.";
+                }
+
+                logMessage(`<b>Dream:</b> <i>${hint}</i>`, 'system');
+                
+                generateInspiration();
+                advanceTime();
+            }, 1500);
+        }
+        
+        function processAcquaintanceMessage(fromAnomaly = false) {
+            const planetData = gameState.planets[gameState.currentPlanet];
+            const lockedRegions = planetData.regions.filter(r => !r.unlocked);
+
+            if (lockedRegions.length > 0) {
+                const regionToUnlock = lockedRegions[0];
+                regionToUnlock.unlocked = true;
+                logMessage(`New location data acquired for <b>${regionToUnlock.name}</b>.`, 'system');
+                addToReport(`Unlocked ${regionToUnlock.name}`);
+            } else {
+                 logMessage("The data packet seems to be indicating a region nearby that is rich in resources.", 'success');
+                 const unlockedRegions = planetData.regions.filter(r => r.unlocked);
+                 const bonusRegion = unlockedRegions[Math.floor(Math.random() * unlockedRegions.length)];
+                 gameState.flags.resourceBonus = { planet: planetData.name, region: bonusRegion.name, day: gameState.day + 1};
+                 logMessage(`The <b>${bonusRegion.name}</b> should yield more resources tomorrow.`, 'system');
+            }
+        }
+
+        function pingGarbledAddress() {
+            closeModal(false);
+            logMessage("You feed the garbled address into the long-range comms array and boost the signal. Through the static, you receive coordinates for a gas giant: Aethel.", "system");
+            gameState.planets['Aethel'].unlocked = true;
+            removeItem('keyItems', 'Garbled Comm Address', 1);
+            addToReport('Discovered planet Aethel');
+            advanceTime(true);
+        }
+
+        function pingDistressBeacon() {
+            closeModal(false);
+            logMessage("You broadcast a signal toward the distress beacon's origin. The reply is ancient and automated, giving you the final coordinates for the shattered world of Ouroboros.", "system");
+            gameState.planets['Ouroboros'].unlocked = true;
+            removeItem('keyItems', 'Distress Beacon Coordinates', 1);
+            addToReport('Discovered planet Ouroboros');
+            advanceTime(true);
+        }
+
+        function endGame(isWin) {
+            actionButtons.innerHTML = '';
+            
+            modalTitle.textContent = "You Escaped!";
+            modalBody.innerHTML = "<p>Congratulations! You have successfully repaired the Echo Drive and jumped to a known system. Your journey is over.</p>";
+            logMessage("SUCCESS! With all three components installed, the Echo Drive whirs to life. You have escaped the uncharted system.", 'system');
+            
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-blue-600/50 hover:bg-blue-500/70 rounded" onclick="newGame()">Play Again</button>`;
+            openModal();
+        }
+
+        function playerDefeated() {
+            actionButtons.innerHTML = ''; // Stop player actions
+            let strangerName = gameState.flags.strangerJoined ? "Durah" : "the Shrouded Stranger";
+            
+            modalTitle.textContent = "You Blacked Out...";
+            modalBody.innerHTML = `<p>Your vision fades... You awake sometime later in ${strangerName}'s shelter, disoriented. Your wounds have been tended to. They've left you two small, wrapped parcels of food, but some of your other supplies are missing.</p>`;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-blue-600/50 hover:bg-blue-500/70 rounded" onclick="resolveDefeat()">Continue</button>`;
+            openModal();
+        }
+
+        function resolveDefeat() {
+            closeModal(false);
+            let strangerName = gameState.flags.strangerJoined ? "Durah" : "the Shrouded Stranger";
+            addItem('consumables', 'Wrapped Parcel', 2);
+            
+            // Restore health/sustenance
+            gameState.player.health = gameState.player.maxHealth / 2;
+            gameState.player.sustenance = gameState.player.maxSustenance / 2;
+            addToReport(`Rescued by ${strangerName}`);
+            addToReport(`+${gameState.player.maxHealth / 2} Health`);
+            addToReport(`+${gameState.player.maxSustenance / 2} Sustenance`);
+
+            // Lose random materials
+            const materialPool = [];
+            for (const item in gameState.inventory.materials) {
+                if (!['Ancient Tech Scrap', 'Time-warped Crystal', 'Leviathan Heartstone'].includes(item)) {
+                    for (let i = 0; i < gameState.inventory.materials[item]; i++) {
+                        materialPool.push(item);
+                    }
+                }
+            }
+
+            // Shuffle and remove
+            materialPool.sort(() => 0.5 - Math.random());
+            const itemsLost = materialPool.slice(0, 10);
+            let lostLog = {};
+            itemsLost.forEach(item => {
+                if (removeItem('materials', item, 1)) {
+                    gameState.dailyReportEvents.pop();
+                    if (!lostLog[item]) lostLog[item] = 0;
+                    lostLog[item]++;
+                }
+            });
+
+            let lostLogString = Object.entries(lostLog).map(([item, qty]) => `${qty} ${item}`).join(', ');
+            if(lostLogString) {
+                logMessage(`In the confusion, you seem to have lost some items: <b>${lostLogString}</b>.`, 'warning');
+                addToReport(`Lost: ${lostLogString}`);
+            }
+
+            // Advance to next day
+            gameState.day++;
+            gameState.timeOfDay = 'Day';
+            applyPassiveBonuses();
+            showDailyReport();
+            rollForSpecialCondition();
+            updateUI();
+        }
+        
+        // --- COMBAT & ITEM USAGE ---
+        function startCombat(creature) {
+            logMessage(`You've been ambushed by a hostile <b>${creature.name}</b>!`, 'danger');
+            modalTitle.textContent = `Encounter: ${creature.name}`;
+            modalBody.innerHTML = `
+                <p>A wild ${creature.name} stands before you, ready to attack!</p>
+                <p class="mt-4">Your Health: ${gameState.player.health}/${gameState.player.maxHealth}</p>
+                <p>Equipped: ${gameState.player.weapon || 'None'}</p>
+            `;
+            modalButtons.innerHTML = `
+                <button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick='resolveCombat(${JSON.stringify(creature)}, "fight")'>Fight</button>
+                <button class="p-2 px-4 bg-yellow-600/50 hover:bg-yellow-500/70 rounded" onclick='resolveCombat(${JSON.stringify(creature)}, "flee")'>Flee</button>
+            `;
+            openModal();
+        }
+        
+        function resolveCombat(creature, action) {
+            const isNight = gameState.timeOfDay === 'Night';
+            if (action === 'fight') {
+                const hasWeapon = !!gameState.player.weapon;
+                const damageRange = hasWeapon ? creature.damage : creature.noWeaponDamage;
+                const damageTaken = Math.floor(Math.random() * (damageRange[1] - damageRange[0] + 1)) + damageRange[0];
+                
+                gameState.player.health = Math.max(0, gameState.player.health - damageTaken);
+                logMessage(`You fight the ${creature.name} and defeat it, but take <b>${damageTaken}</b> damage.`, 'danger');
+                addToReport(`- ${damageTaken} Health (Combat)`);
+
+                const lootLog = [];
+                for(const item in creature.loot) {
+                    addItem('materials', item, creature.loot[item]);
+                    lootLog.push(`${creature.loot[item]} ${item}`);
+                }
+                logMessage(`You salvaged: <b>${lootLog.join(', ')}</b>.`, 'success');
+
+                if (creature.special === 'stranger_defeat') {
+                    closeModal(false); 
+                    strangerDefeatSequence();
+                    return; 
+                }
+
+            } else { // Flee
+                 if (gameState.flags.guaranteedFlee) {
+                    logMessage(`The Stealth Salve works perfectly! You slip away from the ${creature.name} completely unnoticed.`, 'success');
+                    gameState.flags.guaranteedFlee = false;
+                } else {
+                    logMessage(`You managed to escape from the ${creature.name} unharmed.`, 'warning');
+                }
+            }
+
+            closeModal(false);
+
+            if(gameState.player.health <= 0) {
+                playerDefeated();
+            } else {
+                advanceTime(isNight);
+            }
+        }
+        
+        function strangerDefeatSequence() {
+            logMessage("The stranger stumbles back, defeated. They slowly lower their hood, revealing the face of a weary but determined woman. 'You are strong,' she says, her voice raspy. 'Stronger than most who wander to this cursed place. Perhaps... perhaps you are the one.'", "system");
+
+            const missingPart = 'Echo Drive Core';
+            if (!gameState.inventory.keyItems[missingPart]) {
+                addItem('keyItems', missingPart, 1);
+                gameState.goal.partsFound++;
+                logMessage(`She hands you a device you instantly recognize. You found the <b>${missingPart}</b>!`, 'success');
+            } else {
+                logMessage("'I have nothing for you,' she says, looking at your gear. 'You have already found what was lost.'", "info");
+            }
+
+            gameState.flags.strangerJoined = true;
+            gameState.planets.Ouroboros.base.crew.durah = 'hired'; // Hire her directly
+            logMessage("'My name is Durah. My watch is over. If you build a shelter here, I will stand with you.'", "system");
+
+            const isNight = gameState.timeOfDay === 'Night';
+            advanceTime(isNight);
+        }
+
+        function useItem(itemName, category) {
+            if (gameState.inventory[category][itemName] > 0) {
+                
+                let reportMessage;
+                switch(itemName) {
+                    case 'Wrapped Parcel':
+                        removeItem(category, itemName);
+                        logMessage("You unwrap the parcel. Inside is a surprisingly well-preserved pastry.", 'info');
+                        addItem('consumables', 'Fish Pastry', 1);
+                        reportMessage = 'Unwrapped a parcel';
+                        break;
+                    case 'Fish Pastry':
+                        removeItem(category, itemName);
+                        const pastrySustenance = Math.min(gameState.player.maxSustenance - gameState.player.sustenance, 50);
+                        if (pastrySustenance > 0) {
+                            gameState.player.sustenance += pastrySustenance;
+                            logMessage(`You ate the Fish Pastry and restored <b>${pastrySustenance}</b> sustenance. It's oddly comforting.`, 'success');
+                            reportMessage = `Used Fish Pastry (+${pastrySustenance} Sustenance)`;
+                        } else logMessage(`You ate the Fish Pastry, but you were already full.`, 'info');
+                        break;
+                    case 'Med Pack':
+                        removeItem(category, itemName);
+                        const healthRestored = Math.min(gameState.player.maxHealth - gameState.player.health, 50);
+                        gameState.player.health += healthRestored;
+                        logMessage(`You used a Med Pack and restored <b>${healthRestored}</b> health.`, 'success');
+                        reportMessage = `Used Med Pack (+${healthRestored} Health)`;
+                        break;
+                    case 'Nutri-Paste':
+                        removeItem(category, itemName);
+                        const sustenanceToMax = gameState.player.maxSustenance - gameState.player.sustenance;
+                        if (sustenanceToMax > 0) {
+                            gameState.player.sustenance = gameState.player.maxSustenance;
+                            logMessage(`You ate some Nutri-Paste and restored <b>${sustenanceToMax}</b> sustenance, feeling completely full.`, 'success');
+                            reportMessage = `Used Nutri-Paste (+${sustenanceToMax} Sustenance)`;
+                        } else logMessage(`You ate some Nutri-Paste, but you were already full.`, 'info');
+                        break;
+                     case 'Stealth Salve':
+                        removeItem(category, itemName);
+                        gameState.flags.guaranteedFlee = true;
+                        logMessage(`You apply the Stealth Salve. You should be able to escape your next hostile encounter easily.`, 'success');
+                        reportMessage = `Used Stealth Salve`;
+                        break;
+                    case 'Hull Patch':
+                        removeItem(category, itemName);
+                        const repairAmount = Math.floor(Math.random() * 6) + 5; // 5-10
+                        gameState.hull = Math.min(100, gameState.hull + repairAmount);
+                        logMessage(`You apply the Hull Patch, sealing a minor breach. Restored <b>${repairAmount}</b> hull.`, 'success');
+                        reportMessage = `Used Hull Patch (+${repairAmount} Hull)`;
+                        break;
+                    case 'Cooked Leg':
+                    case 'Grilled Scuttler':
+                    case 'Seared Fillet':
+                    case 'Energized Gel':
+                        removeItem(category, itemName);
+                        const rawFoodSustenance = {'Cooked Leg': 35, 'Grilled Scuttler': 50, 'Seared Fillet': 65, 'Energized Gel': 80};
+                        const foodSustenance = Math.min(gameState.player.maxSustenance - gameState.player.sustenance, rawFoodSustenance[itemName]);
+                         if (foodSustenance > 0) {
+                            gameState.player.sustenance += foodSustenance;
+                            logMessage(`You ate the ${itemName} and restored <b>${foodSustenance}</b> sustenance.`, 'success');
+                            reportMessage = `Used ${itemName} (+${foodSustenance} Sustenance)`;
+                        } else logMessage(`You ate the ${itemName}, but you were already full.`, 'info');
+                        break;
+                    default: // Other fruits/nuts
+                        removeItem(category, itemName);
+                        const fruitSustenance = Math.min(gameState.player.maxSustenance - gameState.player.sustenance, 25);
+                        if (fruitSustenance > 0) {
+                            gameState.player.sustenance += fruitSustenance;
+                            logMessage(`You ate the ${itemName} and restored <b>${fruitSustenance}</b> sustenance.`, 'success');
+                            reportMessage = `Used ${itemName} (+${fruitSustenance} Sustenance)`;
+                        } else logMessage(`You ate the ${itemName}, but you were already full.`, 'info');
+                        break;
+                }
+                if (reportMessage) addToReport(reportMessage);
+                updateUI();
+            }
+        }
+
+        // --- BASE BUILDING ---
+        function updateBaseUI(planetData) {
+            const base = planetData.base;
+            const baseProgressNames = ["No site selected", "Campsite Scouted", "Basic Camp", "Established Base"];
+            
+            actionsHeaderButtons.innerHTML = '';
+            if (base.progress >= 2) {
+                const baseButton = document.createElement('button');
+                baseButton.textContent = `${planetData.name} Base`;
+                baseButton.className = 'p-1 px-3 rounded-lg text-sm bg-indigo-500/50 hover:bg-indigo-400/50';
+                baseButton.onclick = showBaseOperationsModal;
+                actionsHeaderButtons.appendChild(baseButton);
+            }
+
+            if (base.progress > 0) {
+                let statusText = `Base Status: ${baseProgressNames[base.progress]}`;
+                if (base.progress >= 2 && base.site) {
+                    const siteData = base.siteOptions.find(o => o.id === base.site);
+                    if (siteData) statusText += ` (Bonus: ${siteData.bonus})`;
+                }
+                if (gameState.flags.strangerJoined && planetData.name === "Ouroboros") {
+                    statusText += " Durah keeps watch.";
+                }
+                baseStatusDisplay.textContent = statusText;
+            } else {
+                baseStatusDisplay.textContent = '';
+            }
+        }
+
+        function showBaseOperationsModal() {
+            const planetData = gameState.planets[gameState.currentPlanet];
+            const base = planetData.base;
+            modalTitle.textContent = `${planetData.name} Base Operations`;
+
+            let bodyHTML = `<div class="grid grid-cols-2 gap-4">`;
+            bodyHTML += `<button class="p-4 rounded-lg bg-indigo-900/50 hover:bg-indigo-800/70" onclick="showCraftingModal(true)">Use Fabricator</button>`;
+
+            const rawFoods = ['Crawler Leg', 'Scuttler Meat', 'Manta Fillet', 'Ectoplasmic Core'];
+            const totalRawFood = rawFoods.reduce((acc, food) => acc + (gameState.inventory.materials[food] || 0), 0);
+            const canCook = totalRawFood > 0 && !gameState.flags.cookedToday;
+
+            if (gameState.flags.cookedToday) {
+                bodyHTML += `<button class="p-4 rounded-lg bg-gray-800/50 text-gray-500 cursor-not-allowed" disabled>You're tired of cooking today</button>`;
+            } else {
+                bodyHTML += `<button class="p-4 rounded-lg ${canCook ? 'bg-indigo-900/50 hover:bg-indigo-800/70' : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'}" ${canCook ? 'onclick="showCookFoodModal()"' : 'disabled'}>Cook Food (${totalRawFood} available)</button>`;
+            }
+
+            // Crew Buttons
+            if (base.crewQuarters) {
+                if (gameState.planets.Xylos.base.crew.vilda === 'hired') bodyHTML += `<button class="p-4 rounded-lg bg-teal-800/50 hover:bg-teal-700/70" onclick="talkToVilda()">Talk to Vilda</button>`;
+                if (gameState.planets.Krylar.base.crew.sansady === 'hired') bodyHTML += `<button class="p-4 rounded-lg bg-teal-800/50 hover:bg-teal-700/70" onclick="talkToSansady()">Talk to Sansady</button>`;
+                if (gameState.planets.Aethel.base.crew.zael === 'hired') bodyHTML += `<button class="p-4 rounded-lg bg-teal-800/50 hover:bg-teal-700/70" onclick="talkToZael()">Talk to Zael</button>`;
+                if (gameState.planets.Ouroboros.base.crew.durah === 'hired') bodyHTML += `<button class="p-4 rounded-lg bg-teal-800/50 hover:bg-teal-700/70" onclick="talkToDurah()">Talk to Durah</button>`;
+            }
+
+
+            bodyHTML += `</div>`;
+            modalBody.innerHTML = bodyHTML;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">Close</button>`;
+            openModal();
+        }
+
+        function showCookFoodModal() {
+            const rawFoodData = {
+                'Crawler Leg': { cooked: 'Cooked Leg', sustenance: 35 },
+                'Scuttler Meat': { cooked: 'Grilled Scuttler', sustenance: 50 },
+                'Manta Fillet': { cooked: 'Seared Fillet', sustenance: 65 },
+                'Ectoplasmic Core': { cooked: 'Energized Gel', sustenance: 80 }
+            };
+
+            modalTitle.textContent = "Select Food to Cook";
+            let bodyHTML = '<div class="space-y-2">';
+            
+            const availableFoods = Object.keys(gameState.inventory.materials)
+                .filter(item => rawFoodData[item])
+                .sort((a, b) => rawFoodData[b].sustenance - rawFoodData[a].sustenance);
+            
+            availableFoods.forEach(food => {
+                const count = gameState.inventory.materials[food];
+                const info = rawFoodData[food];
+                bodyHTML += `
+                    <button class="w-full text-left p-3 bg-indigo-900/50 hover:bg-indigo-800/70 rounded-lg" onclick="cookFood('${food}')">
+                        <div class="flex justify-between">
+                            <span class="font-bold">${food} (x${count})</span>
+                            <span class="text-green-400">+${info.sustenance} Sustenance</span>
+                        </div>
+                    </button>
+                `;
+            });
+
+            bodyHTML += '</div>';
+            modalBody.innerHTML = bodyHTML;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">Cancel</button>`;
+        }
+        
+        function cookFood(rawFoodName) {
+            const rawFoodData = {
+                'Crawler Leg': { cooked: 'Cooked Leg', sustenance: 35 },
+                'Scuttler Meat': { cooked: 'Grilled Scuttler', sustenance: 50 },
+                'Manta Fillet': { cooked: 'Seared Fillet', sustenance: 65 },
+                'Ectoplasmic Core': { cooked: 'Energized Gel', sustenance: 80 }
+            };
+
+            if (removeItem('materials', rawFoodName, 1)) {
+                const cookedFoodName = rawFoodData[rawFoodName].cooked;
+                logMessage(`You cook a ${rawFoodName}. It smells delicious.`, "info");
+                addItem('consumables', cookedFoodName, 1);
+                gameState.flags.cookedToday = true;
+                closeModal();
+                updateUI();
+            }
+        }
+
+        function showCampsiteScoutModal() {
+            const planetData = gameState.planets[gameState.currentPlanet];
+            modalTitle.textContent = "Scout for a Campsite";
+            let bodyHTML = `<p class="mb-4">You survey the area and find two promising locations to set up a more permanent camp.</p><div class="space-y-3">`;
+            
+            planetData.base.siteOptions.forEach(option => {
+                bodyHTML += `<button onclick="selectCampsite('${option.id}')" class="w-full text-left p-3 bg-indigo-900/50 hover:bg-indigo-800/70 rounded-lg">
+                    <h4 class="font-bold text-cyan-300">${option.name}</h4>
+                    <p class="text-sm">${option.desc}</p>
+                </button>`;
+            });
+
+            bodyHTML += `</div>`;
+            modalBody.innerHTML = bodyHTML;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">Decide Later</button>`;
+            openModal();
+        }
+        
+        function selectCampsite(siteId) {
+            const planetData = gameState.planets[gameState.currentPlanet];
+            planetData.base.site = siteId;
+            planetData.base.progress = 1;
+            const siteName = planetData.base.siteOptions.find(o => o.id === siteId).name;
+            logMessage(`You've chosen the <b>${siteName}</b> as your future campsite.`, 'system');
+            addToReport(`Scouted campsite: ${siteName}`);
+            closeModalAndAdvance(true);
+        }
+
+        function showBaseConstructionModal() {
+            const planetData = gameState.planets[gameState.currentPlanet];
+            modalTitle.textContent = "Construct Camp";
+            const cost = planetData.base.buildCosts[1];
+            const costString = formatCostString(cost);
+            const canBuild = hasItems(cost);
+            modalBody.innerHTML = `<div class="p-3 bg-black/20 rounded-lg">
+                    <h4 class="font-bold text-lg text-cyan-300">Construct Basic Camp</h4>
+                    <p class="text-sm text-indigo-300 mb-2">Build a simple shelter to act as a base of operations.</p>
+                    <p class="text-sm">Cost: ${costString}</p>
+                    <button class="w-full mt-4 p-2 rounded text-sm ${canBuild ? 'bg-green-600/50 hover:bg-green-500/70' : 'bg-gray-600/50 cursor-not-allowed'}" ${canBuild ? `onclick="buildBaseLevel(1)"` : 'disabled'}>Build</button>
+                </div>`;
+
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">Cancel</button>`;
+            openModal();
+        }
+
+        function showBaseExpansionModal() {
+            const base = gameState.planets[gameState.currentPlanet].base;
+            modalTitle.textContent = "Expand Base";
+            let bodyHTML = `<div class="space-y-3">`;
+            
+            // 1. Establish Base
+            let canEstablish = hasItems(base.buildCosts[2]);
+            if (base.progress === 2) {
+                 bodyHTML += `<div class="p-3 bg-black/20 rounded-lg">
+                    <p class="font-bold text-lg text-cyan-300">Establish Base</p>
+                    <p class="text-sm text-indigo-300 mb-2">Upgrade your camp into a permanent structure. Slightly increases passive bonus.</p>
+                    <p class="text-sm">Cost: ${formatCostString(base.buildCosts[2])}</p>
+                    <button class="w-full mt-4 p-2 rounded text-sm ${canEstablish ? 'bg-green-600/50 hover:bg-green-500/70' : 'bg-gray-600/50 cursor-not-allowed'}" ${canEstablish ? `onclick="buildBaseLevel(2)"` : 'disabled'}>Build</button>
+                </div>`;
+            } else {
+                 bodyHTML += `<div class="p-3 bg-gray-800/50 rounded-lg text-gray-500"><p class="font-bold text-lg">Base Established</p></div>`;
+            }
+
+            // Other options
+            const established = base.progress >= 3;
+            // 2. Relocate
+            const otherSite = base.siteOptions.find(o => o.id !== base.site);
+            bodyHTML += `<div class="p-3 ${base.progress >= 2 ? 'bg-black/20' : 'bg-gray-800/50 text-gray-500'} rounded-lg">
+                <p class="font-bold text-lg ${base.progress >= 2 ? 'text-cyan-300' : ''}">Relocate Site to ${otherSite.name}</p>
+                <p class="text-sm ${base.progress >= 2 ? 'text-indigo-300' : ''} mb-2">Change passive bonus to: ${otherSite.bonus}.</p>
+                <button class="w-full mt-4 p-2 rounded text-sm ${base.progress >= 2 ? 'bg-blue-600/50 hover:bg-blue-500/70' : 'bg-gray-600/50 cursor-not-allowed'}" ${base.progress >= 2 ? `onclick="relocateBase()"` : 'disabled'}>Relocate</button>
+            </div>`;
+
+            // 3. Crew Quarters
+             let canBuildQuarters = established && hasItems(base.buildCosts[3]);
+             if (base.crewQuarters) {
+                bodyHTML += `<div class="p-3 bg-gray-800/50 rounded-lg text-gray-500"><p class="font-bold text-lg">Crew Quarters Built</p></div>`;
+             } else {
+                 bodyHTML += `<div class="p-3 ${established ? 'bg-black/20' : 'bg-gray-800/50 text-gray-500'} rounded-lg">
+                    <p class="font-bold text-lg ${established ? 'text-cyan-300' : ''}">Build Crew Quarters</p>
+                    <p class="text-sm ${established ? 'text-indigo-300' : ''} mb-2">Adds living space. Allows all hired crew to gather at this base.</p>
+                    <p class="text-sm">Cost: ${formatCostString(base.buildCosts[3])}</p>
+                    <button class="w-full mt-4 p-2 rounded text-sm ${canBuildQuarters ? 'bg-green-600/50 hover:bg-green-500/70' : 'bg-gray-600/50 cursor-not-allowed'}" ${canBuildQuarters ? `onclick="buildCrewQuarters()"` : 'disabled'}>Build</button>
+                </div>`;
+             }
+            
+            // 4. Planet Specific
+            const expansionType = gameState.planets[gameState.currentPlanet].base.expansionName.split(' ').pop().toLowerCase();
+            let canBuildExpansion = established && hasItems(base.buildCosts[expansionType]);
+            if(base.expansion) {
+                 bodyHTML += `<div class="p-3 bg-gray-800/50 rounded-lg text-gray-500"><p class="font-bold text-lg">${gameState.planets[gameState.currentPlanet].base.expansionName} Built</p></div>`;
+            } else {
+                 bodyHTML += `<div class="p-3 ${established ? 'bg-black/20' : 'bg-gray-800/50 text-gray-500'} rounded-lg">
+                    <p class="font-bold text-lg ${established ? 'text-cyan-300' : ''}">${gameState.planets[gameState.currentPlanet].base.expansionName}</p>
+                    <p class="text-sm ${established ? 'text-indigo-300' : ''} mb-2">Greatly improves this base's passive bonus.</p>
+                    <p class="text-sm">Cost: ${formatCostString(base.buildCosts[expansionType])}</p>
+                    <button class="w-full mt-4 p-2 rounded text-sm ${canBuildExpansion ? 'bg-green-600/50 hover:bg-green-500/70' : 'bg-gray-600/50 cursor-not-allowed'}" ${canBuildExpansion ? `onclick="buildPlanetExpansion()"` : 'disabled'}>Build</button>
+                </div>`;
+            }
+
+            bodyHTML += `</div>`;
+            modalBody.innerHTML = bodyHTML;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="closeModal()">Cancel</button>`;
+            openModal();
+        }
+
+        function buildBaseLevel(level) {
+             const planetData = gameState.planets[gameState.currentPlanet];
+             const cost = planetData.base.buildCosts[level];
+             if (spendItems(cost)) {
+                 planetData.base.progress = level + 1; // 1->2 (camp), 2->3 (base)
+                 const stageName = level === 1 ? 'Basic Camp' : 'Established Base';
+                 logMessage(`You spend the night working. You've constructed a ${stageName}.`, 'success');
+                 addToReport(`Constructed ${stageName}`);
+                 closeModalAndAdvance(true);
+             }
+        }
+        
+        function relocateBase() {
+            const base = gameState.planets[gameState.currentPlanet].base;
+            const otherSite = base.siteOptions.find(o => o.id !== base.site);
+            base.site = otherSite.id;
+            logMessage(`You spend the night relocating your base to the ${otherSite.name}.`, 'system');
+            addToReport(`Relocated base to ${otherSite.name}`);
+            closeModalAndAdvance(true);
+        }
+        function buildCrewQuarters() {
+            const base = gameState.planets[gameState.currentPlanet].base;
+            if(spendItems(base.buildCosts[3])) {
+                base.crewQuarters = true;
+                logMessage(`You've built crew quarters, making the base more comfortable.`, 'success');
+                addToReport('Built Crew Quarters');
+                closeModalAndAdvance(true);
+            }
+        }
+        function buildPlanetExpansion() {
+            const base = gameState.planets[gameState.currentPlanet].base;
+            const expansionType = base.expansionName.split(' ').pop().toLowerCase();
+            if(spendItems(base.buildCosts[expansionType])) {
+                base.expansion = true;
+                logMessage(`You've finished construction on the ${base.expansionName}. It should start producing soon.`, 'success');
+                addToReport(`Built ${base.expansionName}`);
+                closeModalAndAdvance(true);
+            }
+        }
+        
+        // --- MODAL CONTROLS ---
+        function openModal() {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal(reEnableButtons = true) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            modalTitle.innerHTML = '';
+            modalBody.innerHTML = '';
+            modalButtons.innerHTML = '';
+            if (reEnableButtons) {
+                actionButtons.querySelectorAll('button').forEach(b => b.disabled = false);
+            }
+        }
+        
+        function closeModalAndAdvance(isNightAction = false) {
+            closeModal(false);
+            advanceTime(isNightAction);
+        }
+
+        // --- SAVE/LOAD ---
+        function saveGame() {
+            try {
+                const dataStr = JSON.stringify(gameState);
+                const blob = new Blob([dataStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `space_life_save_day_${gameState.day}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                logMessage("Game state saved to file.", "system");
+            } catch (error) {
+                logMessage("Error saving game: " + error, "danger");
+            }
+        }
+
+        function triggerLoadGame() {
+            document.getElementById('load-game-input').click();
+        }
+
+        function handleFileLoad(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const loadedState = JSON.parse(e.target.result);
+                    // Basic validation to see if it's a valid save file
+                    if (loadedState && loadedState.hasOwnProperty('day') && loadedState.hasOwnProperty('currentPlanet')) {
+                        Object.assign(gameState, loadedState);
+                        logMessage("Save file loaded successfully.", "system");
+                        updateUI();
+                    } else {
+                        throw new Error("Invalid save file format.");
+                    }
+                } catch (error) {
+                    logMessage("Error loading save file: " + error, "danger");
+                }
+            };
+            reader.readAsText(file);
+            // Reset the input so the same file can be loaded again if needed
+            event.target.value = '';
+        }
+
+        function confirmNewGame() {
+            modalTitle.textContent = "Confirm New Game";
+            modalBody.innerHTML = `<p>Are you sure you want to start a new game? Any unsaved progress will be lost.</p>`;
+            modalButtons.innerHTML = `
+                <button class="p-2 px-4 bg-gray-600/50 hover:bg-gray-500/70 rounded" onclick="closeModal()">Cancel</button>
+                <button class="p-2 px-4 bg-red-600/50 hover:bg-red-500/70 rounded" onclick="newGame()">Start New Game</button>
+            `;
+            openModal();
+        }
+
+        function newGame() {
+            gameState = JSON.parse(JSON.stringify(initialGameState));
+            logDisplay.innerHTML = '';
+            logMessage("Your starship is stranded in an uncharted star system. The primary long-range communicator is offline. You must find the three missing components of the 'Echo Drive' in order to jump to a different system. Scour the system, upgrade your ship, and brave the unknown. The fate of your mission rests on your shoulders.", "system");
+            closeModal();
+            updateUI();
+        }
+
+        // --- CREW ---
+
+        function findVilda() {
+            logMessage("The anomaly is a distress call from a small, damaged ship. You find a survivor, a stoic woman named Vilda, who is an expert gemstone appraiser. Her ship is beyond repair.", 'system');
+            gameState.planets.Xylos.base.crew.vilda = 'known';
+            logMessage("'I owe you my life,' she says. 'If you set up a base here, I can help you identify the most valuable geological finds. Contact me when you're established.'", 'system');
+            addToReport('Rescued Vilda');
+            advanceTime();
+        }
+        function findSansady() {
+            logMessage("While exploring the vents, you find a winged creature tending to an injury. They introduce themselves as Sansady, an explorer. They offer their services in exchange for a safe place to rest.", 'system');
+            gameState.planets.Krylar.base.crew.sansady = 'known';
+            logMessage("'This moon is treacherous, but rewarding,' they chirp. 'Build a proper base, and I will scout for you. My eyes miss little.'", 'system');
+            addToReport('Met Sansady');
+            advanceTime(gameState.timeOfDay === 'Night');
+        }
+        function findZael() {
+            const planetData = gameState.planets.Aethel;
+            const event = planetData.lifeformEvents.find(e => e.type === 'crew');
+            logMessage(event.text, 'system');
+            planetData.base.crew.zael = 'known';
+            logMessage("You've noted their comm frequency. You might be able to contact them later.", 'system');
+            addToReport('Met Zael at the market');
+            advanceTime();
+        }
+
+        function contactVilda() {
+             modalTitle.textContent = "Contact Vilda";
+             const base = gameState.planets.Xylos.base;
+             if (!base.crewQuarters) {
+                modalBody.innerHTML = `<p>'It's good to hear from you,' a voice says over the comm. 'But I can't just move my equipment into a tent. Build some proper quarters and we can talk.'<p>`;
+             } else {
+                 modalBody.innerHTML = `<p>'Your base looks sturdy. I'm a person of my word. For 20 Scrap Metal, I'll set up my workshop at your base. I can help you find rare minerals.'<p>`;
+                 const canHire = hasItems({'Scrap Metal': 20});
+                 modalButtons.innerHTML += `<button class="p-2 px-4 ${canHire ? 'bg-green-600/50' : 'bg-gray-600/50'} rounded" ${canHire ? 'onclick="hireVilda()"' : 'disabled'}>Hire (20 Scrap Metal)</button>`;
+             }
+             modalButtons.innerHTML += `<button class="p-2 px-4 bg-red-600/50 rounded" onclick="closeModal()">End Transmission</button>`;
+             openModal();
+        }
+        function hireVilda() {
+            if(spendItems({'Scrap Metal': 20})) {
+                gameState.planets.Xylos.base.crew.vilda = 'hired';
+                logMessage("Vilda has joined your crew on Xylos.", 'success');
+                addToReport("Hired Vilda");
+                closeModalAndAdvance(true);
+            }
+        }
+        function talkToVilda(){
+            modalTitle.textContent = "Talk to Vilda";
+            modalBody.innerHTML = `<p>"The crystals on this world sing a unique song. If you bring me 10 Crystal Shards, I can align their frequencies and create a resonant Energy Geode for you."</p>`;
+            const canTrade = gameState.inventory.materials['Crystal Shard'] >= 10;
+            modalButtons.innerHTML = `<button class="p-2 px-4 ${canTrade ? 'bg-green-600/50' : 'bg-gray-600/50'} rounded" ${canTrade ? 'onclick="vildaTrade()"' : 'disabled'}>Trade (10 Crystal Shards)</button>`;
+            modalButtons.innerHTML += `<button class="p-2 px-4 bg-red-600/50 rounded" onclick="closeModal()">Leave</button>`;
+            openModal();
+        }
+        function vildaTrade(){
+             if(removeItem('materials', 'Crystal Shard', 10)) {
+                 addItem('materials', 'Energy Geode', 1);
+                 logMessage("Vilda works her magic, and hands you a perfectly formed Energy Geode.", 'success');
+                 closeModal();
+             }
+        }
+
+        function contactSansady(){
+            modalTitle.textContent = "Contact Sansady";
+            const base = gameState.planets.Krylar.base;
+             if (!base.crewQuarters) {
+                modalBody.innerHTML = `<p>'Ah, the ship-dweller,' the voice chirps. 'This rock is cold. I need a proper roost. Build one, and I will join you.'<p>`;
+             } else {
+                 modalBody.innerHTML = `<p>'A fine perch! As promised, I will join you. I require 5 Glimmerfruit as a sign-on bonus. My scouting will surely find you valuable ores.'<p>`;
+                 const canHire = hasItems({'Glimmerfruit': 5});
+                 modalButtons.innerHTML += `<button class="p-2 px-4 ${canHire ? 'bg-green-600/50' : 'bg-gray-600/50'} rounded" ${canHire ? 'onclick="hireSansady()"' : 'disabled'}>Hire (5 Glimmerfruit)</button>`;
+             }
+            modalButtons.innerHTML += `<button class="p-2 px-4 bg-red-600/50 rounded" onclick="closeModal()">End Transmission</button>`;
+            openModal();
+        }
+        function hireSansady(){
+            if(spendItems({'Glimmerfruit': 5})) {
+                gameState.planets.Krylar.base.crew.sansady = 'hired';
+                logMessage("Sansady has joined your crew on Krylar. Their passive scouting will now begin.", 'success');
+                addToReport("Hired Sansady");
+                closeModalAndAdvance(true);
+            }
+        }
+        function talkToSansady(){
+            modalTitle.textContent = "Talk to Sansady";
+            modalBody.innerHTML = `<p>"The solar winds are strong today. I will keep my eyes open for you, friend."</p>`;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 rounded" onclick="closeModal()">Leave</button>`;
+            openModal();
+        }
+
+        function contactZael() {
+            modalTitle.textContent = "Contact Zael";
+            const base = gameState.planets.Aethel.base;
+             if (!base.crewQuarters) {
+                modalBody.innerHTML = `<p>The comm crackles. 'Can't talk. They're watching. Need a secure place... a real building.'<p>`;
+             } else {
+                 modalBody.innerHTML = `<p>'You have a safe place? Good. I can help you, but I need to clear my debt. 50 Aethel Credits. It's the only way I can be free to work with you.'<p>`;
+                 const canHire = hasItems({'Aethel Credits': 50});
+                 modalButtons.innerHTML += `<button class="p-2 px-4 ${canHire ? 'bg-green-600/50' : 'bg-gray-600/50'} rounded" ${canHire ? 'onclick="hireZael()"' : 'disabled'}>Hire (50 Aethel Credits)</button>`;
+             }
+            modalButtons.innerHTML += `<button class="p-2 px-4 bg-red-600/50 rounded" onclick="closeModal()">End Transmission</button>`;
+            openModal();
+        }
+         function hireZael(){
+            if(spendItems({'Aethel Credits': 50})) {
+                gameState.planets.Aethel.base.crew.zael = 'hired';
+                logMessage("Zael has joined your crew on Aethel. They can run the shop once it's built, improving trade prices.", 'success');
+                addToReport("Hired Zael");
+                closeModalAndAdvance(true);
+            }
+        }
+        function talkToZael(){
+            modalTitle.textContent = "Talk to Zael";
+            const expansion = gameState.planets.Aethel.base.expansion;
+            if(expansion) {
+                 modalBody.innerHTML = `<p>"Thanks for setting up the shop. Business is slow, but it's a start. Because you helped me, I'll give you a discount on fuel cells."</p>`;
+                 const hasCredits = hasItems({'Aethel Credits': 15});
+                 modalButtons.innerHTML = `<button class="p-2 px-4 ${hasCredits ? 'bg-green-600/50' : 'bg-gray-600/50'} rounded" ${hasCredits ? 'onclick="zaelTrade()"' : 'disabled'}>Buy Fuel Cell (15 Credits)</button>`;
+            } else {
+                modalBody.innerHTML = `<p>"Thank you for getting me out of that mess. If you build a proper shop here, I can use my old contacts to get us better deals."</p>`;
+            }
+            modalButtons.innerHTML += `<button class="p-2 px-4 bg-red-600/50 rounded" onclick="closeModal()">Leave</button>`;
+            openModal();
+        }
+        function zaelTrade() {
+            if(spendItems({'Aethel Credits': 15})) {
+                addItem('materials', 'Fuel Cell', 1);
+                logMessage("Zael slips you a Fuel Cell from under the counter.", "success");
+                closeModal();
+            }
+        }
+         function talkToDurah(){
+            modalTitle.textContent = "Talk to Durah";
+            modalBody.innerHTML = `<p>"This place... it is a grave. But you have brought a spark of life to it. I will keep it safe. Go. Finish your mission."</p>`;
+            modalButtons.innerHTML = `<button class="p-2 px-4 bg-red-600/50 rounded" onclick="closeModal()">Leave</button>`;
+            openModal();
+        }
+
+        // --- START GAME ---
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+

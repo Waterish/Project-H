@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wicked: An Untold Story</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Merriweather', serif;
+            overscroll-behavior: none;
+            background-color: #051405;
+            background-image: radial-gradient(circle at top right, rgba(16, 185, 129, 0.2), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(20, 83, 45, 0.3), transparent 50%);
+        }
+        .font-cinzel {
+            font-family: 'Cinzel Decorative', cursive;
+        }
+        .game-container {
+            background-color: rgba(12, 43, 25, 0.6);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .game-btn, .tab-btn {
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        .game-btn:hover, .tab-btn:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3);
+        }
+        .modal-content {
+            background-color: rgba(12, 43, 25, 0.8);
+            border: 1px solid rgba(16, 185, 129, 0.6);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        }
+        .galinda-modal-content {
+            background-color: rgba(252, 211, 240, 0.8); /* pink-100 with opacity */
+            border: 2px solid #f472b6; /* pink-400 */
+            color: #581c87; /* purple-900 */
+            backdrop-filter: blur(15px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        }
+        .tab-btn.active {
+            background-color: #065f46; /* emerald-700 */
+            color: white;
+            border-bottom-color: #34d399; /* emerald-400 */
+        }
+        .puzzle-input {
+            background-color: rgba(10, 30, 15, 0.7);
+            border: 2px solid rgba(16, 185, 129, 0.5);
+            transition: all 0.3s;
+        }
+        .puzzle-input:focus {
+            border-color: #6ee7b7; /* emerald-300 */
+            box-shadow: 0 0 15px rgba(110, 231, 183, 0.5);
+        }
+    </style>
+</head>
+<body class="text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl mx-auto game-container rounded-2xl p-6 md:p-8 space-y-6">
+        <!-- Header -->
+        <div class="text-center border-b border-emerald-800 pb-4">
+            <h1 class="text-3xl md:text-4xl font-bold text-emerald-400 font-cinzel">An Untold Endeavor</h1>
+            <p id="current-location-text" class="text-lg text-gray-400 mt-1">Shiz University Dormitory</p>
+        </div>
+
+        <!-- Game Display -->
+        <div class="bg-black/30 rounded-lg p-4 md:p-6 min-h-[200px] flex items-center justify-center border border-emerald-900">
+            <div class="text-center">
+                <p id="game-text" class="text-lg leading-relaxed"></p>
+                <p id="cast-counter-text" class="text-2xl font-bold text-yellow-400 mt-4"></p>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div id="actions-container" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- Action buttons will be dynamically inserted here -->
+        </div>
+        
+        <!-- Navigation -->
+        <div class="border-t border-emerald-800 pt-4">
+            <h2 class="text-xl font-semibold text-center mb-4 text-emerald-500 font-cinzel">Travel via Map of Oz</h2>
+            <div id="locations-container" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- Location buttons will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <!-- Spell Components -->
+        <div class="border-t border-emerald-800 pt-4">
+            <div class="flex justify-center items-center gap-4 mb-4">
+                <h2 class="text-xl font-semibold text-emerald-500 font-cinzel">Spell Components</h2>
+                <div id="grimmerie-button-container"></div> <!-- Grimmerie button goes here -->
+            </div>
+            <div id="inventory-container" class="bg-black/30 rounded-lg p-4 min-h-[60px] flex flex-wrap gap-4 justify-center items-center border border-emerald-900">
+                <p id="empty-inventory-text" class="text-gray-500">Your satchel is empty.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grimmerie Modal -->
+    <div id="grimmerie-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="modal-content rounded-2xl p-8 max-w-md w-full text-center space-y-4">
+            <h2 class="text-2xl font-bold text-emerald-400 font-cinzel">The Grimmerie</h2>
+            <div class="grid grid-cols-2 gap-2">
+                 <button id="scry-button" class="w-full bg-purple-800 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg game-btn">Scry for Clues</button>
+                 <button id="spellbook-tab-button" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg game-btn">Spellbook</button>
+            </div>
+            <div id="spellbook-section" class="hidden">
+                <h3 class="text-xl font-bold text-emerald-400 mt-4 font-cinzel">Known Spells</h3>
+                <div id="grimmerie-tabs" class="flex border-b border-emerald-700">
+                    <!-- Recipe tabs go here -->
+                </div>
+                <div class="pt-4">
+                    <p class="text-gray-300">Spell: <span id="schematic-name" class="font-semibold text-yellow-400"></span></p>
+                    <div id="grimmerie-ingredients" class="space-y-2 text-left bg-black/30 p-4 rounded-lg my-4 border border-emerald-900">
+                        <!-- Ingredients will be dynamically inserted here -->
+                    </div>
+                    <button id="weave-spell-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg game-btn" disabled>Weave Spell</button>
+                </div>
+            </div>
+            <button id="close-grimmerie-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg game-btn mt-2">Close Grimmerie</button>
+        </div>
+    </div>
+
+    <!-- Galinda Modal -->
+    <div id="galinda-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="galinda-modal-content rounded-2xl p-8 max-w-md w-full text-center space-y-4">
+            <h2 id="galinda-modal-title" class="text-3xl font-bold text-pink-500 font-cinzel">A Word with Galinda</h2>
+            <div id="galinda-modal-content-area">
+                <!-- Galinda's dialogue and questions will appear here -->
+            </div>
+            <button id="close-galinda-btn" class="w-full bg-pink-400 hover:bg-pink-500 text-white font-bold py-2 px-4 rounded-lg game-btn mt-2">"That's all for now."</button>
+        </div>
+    </div>
+
+    <!-- Music Puzzle Modal -->
+    <div id="music-puzzle-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="modal-content rounded-2xl p-8 max-w-md w-full text-center space-y-6">
+            <h2 class="text-2xl font-bold text-emerald-400 font-cinzel">The Lullaby Lock</h2>
+            <p class="text-gray-300">A music box sits on the desk, sealed by a magical lock. An inscription reads: "His favorite lullaby, a melody of home." You recall Fiyero humming a simple tune. Can you replicate the first four notes?</p>
+            <div class="flex justify-center gap-4">
+                <input type="text" id="music-input-1" class="puzzle-input w-12 h-16 text-4xl text-center text-emerald-400 rounded-lg focus:outline-none uppercase" placeholder="?" maxlength="1">
+                <input type="text" id="music-input-2" class="puzzle-input w-12 h-16 text-4xl text-center text-emerald-400 rounded-lg focus:outline-none uppercase" placeholder="?" maxlength="1">
+                <input type="text" id="music-input-3" class="puzzle-input w-12 h-16 text-4xl text-center text-emerald-400 rounded-lg focus:outline-none uppercase" placeholder="?" maxlength="1">
+                <input type="text" id="music-input-4" class="puzzle-input w-12 h-16 text-4xl text-center text-emerald-400 rounded-lg focus:outline-none uppercase" placeholder="?" maxlength="1">
+            </div>
+            <p class="text-gray-400 text-sm">(Use musical notes: A, B, C, D, E, F, G)</p>
+            <button id="submit-music-puzzle-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg game-btn">Play Tune</button>
+            <p id="music-puzzle-feedback" class="text-red-400 h-6"></p>
+            <button id="leave-music-puzzle-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg game-btn mt-4">Step Away</button>
+        </div>
+    </div>
+
+    <!-- Main Puzzle Modal -->
+    <div id="puzzle-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="modal-content rounded-2xl p-8 max-w-md w-full text-center space-y-6">
+            <h2 class="text-2xl font-bold text-emerald-400 font-cinzel">The Heart of the Spell</h2>
+            <p class="text-gray-300">The Grimmerie whispers a final riddle. To unlock its true power, you must speak the word that defines the Wizard's reign. What is his greatest, most foundational deception?</p>
+            <div class="flex justify-center gap-4">
+                <input type="text" id="puzzle-input-1" class="puzzle-input w-16 h-16 text-4xl text-center text-emerald-400 rounded-lg focus:outline-none uppercase" maxlength="1">
+                <input type="text" id="puzzle-input-2" class="puzzle-input w-16 h-16 text-4xl text-center text-emerald-400 rounded-lg focus:outline-none uppercase" maxlength="1">
+                <input type="text" id="puzzle-input-3" class="puzzle-input w-16 h-16 text-4xl text-center text-emerald-400 rounded-lg focus:outline-none uppercase" maxlength="1">
+            </div>
+            <button id="submit-puzzle-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg game-btn">Speak the Word</button>
+            <p id="puzzle-feedback" class="text-red-400 h-6"></p>
+            <button id="leave-puzzle-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg game-btn mt-4">Step Back</button>
+        </div>
+    </div>
+    
+    <script>
+        const gameData = {
+            locations: {
+                shiz: {
+                    name: "Shiz University Dormitory",
+                    description: "Your shared room at Shiz. Galinda's pink gowns are everywhere. On your desk, the ancient Grimmerie, a gift from Doctor Dillamond, seems to hum with latent power.",
+                    clue: "A note from Fiyero is tucked in the Grimmerie: 'Met a talking Lion Cub near the old Kiamo Ko fortress. He was scared. Said the Wizard's men were taking everything, even their <strong>courage</strong>.'",
+                    isLocked: false,
+                    actions: [
+                        { name: "Read the Grimmerie", run: (state) => {
+                            if (!state.logs.grimmerieOpened) {
+                                state.logs.grimmerieOpened = true;
+                                updateGameText(`You open the book of spells. Its pages are filled with forgotten enchantments. You find a note from Fiyero tucked inside. ${gameData.locations.shiz.clue}`);
+                                render();
+                            } else {
+                                updateGameText(`You've already read the Grimmerie's introduction. Fiyero's note is still there: ${gameData.locations.shiz.clue}`);
+                            }
+                        }},
+                        { name: "Talk to Galinda", character: true, run: (state) => {
+                            toggleGalindaModal(true);
+                        }}
+                    ]
+                },
+                cornfield: { name: "The Cornfield", description: "A lonely cornfield where you once saved a scarecrow from ridicule. The wind whispers through the dry stalks.", isLocked: true, items: ["A Memory of Kindness"], actions: [{ name: "Remember the Scarecrow", item: "A Memory of Kindness", run: (state) => takeItem("A Memory of Kindness") }] },
+                vinkus: { name: "The Vinkus", description: "The windswept plains of the Vinkus, Fiyero's home. A field of poppies sways, their scent heavy in the air. They are beautiful, but dangerous.", isLocked: true, items: ["Essence of Poppy"], actions: [{ name: "Harvest Poppy Essence", item: "Essence of Poppy", run: (state) => takeItem("Essence of Poppy") }] },
+                kiamoKo: { 
+                    name: "Kiamo Ko Castle", 
+                    description: "The abandoned, crumbling castle that has become your refuge. In the dungeons, you find strange metal parts left behind by the previous owner. There's also a dusty study upstairs.", 
+                    isLocked: true, 
+                    items: ["Discarded Tin Parts", "Bucket of Water"], 
+                    actions: [
+                        { name: "Salvage Tin Parts", item: "Discarded Tin Parts", run: (state) => takeItem("Discarded Tin Parts") }, 
+                        { name: "Fetch Water", item: "Bucket of Water", run: (state) => takeItem("Bucket of Water") },
+                        { name: "Investigate Study", run: (state) => {
+                            if (state.logs.musicPuzzleSolved) {
+                                updateGameText("You've already solved the music box puzzle and taken the crest.");
+                                return;
+                            }
+                            document.getElementById('music-puzzle-modal').classList.remove('hidden');
+                        }},
+                        { name: "Cast Spell of Revealing", run: (state) => {
+                            if (state.inventory.includes("Spell of Revealing") && state.inventory.includes("Discarded Tin Parts")) {
+                                state.inventory = state.inventory.filter(item => item !== "Discarded Tin Parts");
+                                state.inventory.push("A Heartfelt Locket");
+                                updateGameText("You chant the words from the Grimmerie. The Spell of Revealing flows from your hands into the pile of cold metal. The parts shimmer and reform into a warm, glowing Locket!");
+                                render();
+                            } else if (state.inventory.includes("Spell of Revealing")) {
+                                updateGameText("You have the spell, but nothing to cast it on.");
+                            } else if (state.inventory.includes("Discarded Tin Parts")) {
+                                updateGameText("You have the parts, but don't know the right spell to change them.");
+                            } else {
+                                updateGameText("There is nothing here to use a spell on.");
+                            }
+                        }}
+                    ] 
+                },
+                emeraldCity: { name: "The Emerald City", description: "The glittering, green heart of Oz. The Wizard's palace looms over everything, a monument to his power. The air buzzes with excitement for a ceremony.", isLocked: true, items: ["Propaganda Poster"], clue: "A poster declares: 'The Wizard's 'Animal Protection Act' is a triumph! All Animals are now safe... and silent. For their own good, of course.' The word <strong>'Act'</strong> feels hollow.", actions: [{ name: "Grab a Poster", item: "Propaganda Poster", run: (state) => takeItem("Propaganda Poster") }, { name: "Listen to Rumors", run: (state) => { state.logs.rumorsHeard = true; updateGameText(`Citizens gossip about the Wizard's latest 'triumph'. ${gameData.locations.emeraldCity.clue}`); } }] },
+                munchkinland: { 
+                    name: "Munchkinland Farm", 
+                    description: "A quaint farm, now eerily quiet. The Munchkins are nowhere to be seen, but you find a small, abandoned workshop.", 
+                    isLocked: true, 
+                    items: ["Broomstick"], 
+                    actions: [
+                        { name: "Find a Broomstick", item: "Broomstick", run: (state) => takeItem("Broomstick") }
+                    ] 
+                },
+                timeDragonClock: { 
+                    name: "The Time Dragon Clock", 
+                    description: "A massive, clockwork dragon, its inner workings a mystery. It seems to watch over all of Oz, a silent historian.", 
+                    isLocked: true, 
+                    clue: "A hidden inscription reads: 'To see the truth, one must look beyond the spectacle. The Wizard's greatest illusion is not what he shows, but what he makes you be<strong>lie</strong>ve.'", 
+                    puzzle: { solution: ["L", "I", "E"] },
+                    actions: [
+                        { name: "Examine the Clockwork", run: (state) => { state.logs.clockExamined = true; updateGameText(`The intricate gears and levers are a marvel of engineering. You find a small, almost hidden inscription. ${gameData.locations.timeDragonClock.clue} If it is not truth then it is a...`); } }, 
+                        { name: "Place Spell Components", run: (state) => { 
+                            if (state.inventory.includes("Defiance Potion")) { 
+                                state.inventory = state.inventory.filter(item => item !== "Defiance Potion"); 
+                                state.logs.potionPlaced = true; 
+                                updateGameText("You pour the Defiance Potion into a focusing lens within the clockwork. The magic resonates, humming with potential. The Grimmerie now demands a final word of power."); 
+                                render(); 
+                            } else { 
+                                updateGameText("You feel a surge of power from the clock, but you have nothing to focus it with. A powerful, truth-enhancing potion might work."); 
+                            } 
+                        }}, 
+                        { name: "Activate the Grimmerie", run: (state) => { 
+                            if (state.inventory.includes("Levitation Spell")) { 
+                                document.getElementById('puzzle-input-1').value = '';
+                                document.getElementById('puzzle-input-2').value = '';
+                                document.getElementById('puzzle-input-3').value = '';
+                                document.getElementById('puzzle-feedback').textContent = '';
+                                document.getElementById('submit-puzzle-btn').disabled = false;
+                                document.getElementById('puzzle-modal').classList.remove('hidden'); 
+                            } else { 
+                                updateGameText("The Grimmerie is waiting for a completed spell to be placed within its pages."); 
+                            } 
+                        } }
+                    ] 
+                },
+                shadedWoods: {
+                    name: "Shaded Woods",
+                    description: "A quiet, shaded wood near the Vinkus. Fiyero is here, trying to break open a cage holding a terrified Lion Cub.",
+                    isLocked: true,
+                    items: ["A Lion's Courage"],
+                    actions: [
+                        { name: "Free the Lion Cub", item: "A Lion's Courage", run: (state) => takeItem("A Lion's Courage") },
+                        { name: "Talk to Fiyero", run: (state) => {
+                            if (state.logs.finalSpellFailed && !state.inventory.includes("A Lion's Courage")) {
+                                updateGameText(`"I can't believe you tried that! It was... magnificent. And terrifying. Here," he says, pressing the lion's token back into your hand. "The little guy wanted you to have this back. Don't give up."`);
+                                state.inventory.push("A Lion's Courage");
+                                render();
+                                return;
+                            }
+
+                            if (!state.logs.fiyeroHint) {
+                                state.logs.fiyeroHint = true;
+                                updateGameText(`"Elphie! Thank goodness. Help me with this cage. While you do that, I'll keep watch." He nervously hums a tune to himself... it sounds like G, E, C, G...`);
+                            } else {
+                                updateGameText(`"Just be careful, Elphie. The Wizard's Guard is everywhere."`);
+                            }
+                        }}
+                    ]
+                }
+            },
+            scryData: {
+                shiz: { code: 'OZIMAN', unlocks: ['cornfield', 'vinkus'] },
+                vinkus: { static: true, message: 'The poppy fields cloud your scrying mirror with hazy dreams.' },
+                cornfield: { code: 'DIAS', unlocks: ['kiamoKo'] },
+                kiamoKo: { code: 'AHBEN', unlocks: ['emeraldCity', 'munchkinland'] },
+                emeraldCity: { static: true, message: 'The Wizard\'s magic interferes, showing you only what he wants you to see: glittering spires and happy people.' },
+                munchkinland: { code: 'TAHKAY', unlocks: ['timeDragonClock'] },
+                timeDragonClock: { code: 'VENTETA', unlocks: ['shadedWoods'] },
+                shadedWoods: { static: true, message: 'The woods are too dense and magical to scry through. You see nothing but shifting leaves.' }
+            },
+            items: { 
+                "A Memory of Kindness": "A warm feeling, a reminder of why you started this fight. It feels like... intelligence.", 
+                "Essence of Poppy": "A concentrated liquid that induces a deep, dreamless sleep.", 
+                "Discarded Tin Parts": "Cold, unfeeling metal. It lacks a certain... heart.", 
+                "A Heartfelt Locket": "The tin parts, transformed by magic, now reveal a locket. It radiates warmth and love.",
+                "Propaganda Poster": "A colorful lie, printed on cheap paper.", 
+                "Bucket of Water": "Simple, pure, and a potent weakness for some.", 
+                "Witch's Hat": "A pointy black hat. It feels iconic. A gift from Galinda.", 
+                "Broomstick": "A simple broom, but in the right hands, it could fly.", 
+                "Defiance Potion": "A potion that reveals truth, made from poppy essence and painful memories.", 
+                "A Lion's Courage": "A token of bravery from a freed Lion Cub.", 
+                "Tear of Regret": "A single, shimmering tear from Glinda. It hums with sincerity.",
+                "Fiyero's Family Crest": "A small, metal emblem of a hawk in flight. It feels protective.",
+                "Spell of Revealing": "A spell to reveal the true heart of an object or person.",
+                "Levitation Spell": "The completed spell from the Grimmerie, ready to be empowered.", 
+                "Empowered Spell": "The spell crackles with the truth, ready to be cast." 
+            },
+            spellbook: [
+                { recipe: "Levitation Spell", ingredients: ["A Heartfelt Locket", "A Lion's Courage", "Witch's Hat", "Broomstick"] }, 
+                { recipe: "Defiance Potion", ingredients: ["Essence of Poppy", "Bucket of Water"] },
+                { recipe: "Spell of Revealing", ingredients: ["A Memory of Kindness", "Tear of Regret", "Fiyero's Family Crest"] }
+            ],
+            musicPuzzle: { solution: ["G", "E", "C", "G"] }
+        };
+
+        const gameState = {
+            currentLocation: "shiz",
+            inventory: [],
+            logs: { grimmerieOpened: false, rumorsHeard: false, clockExamined: false, potionPlaced: false, spellWeaved: false, puzzleSolved: false, spellReady: false, gameWon: false, castClicks: 0, galindaQuestionAnswered: false, glindaTransformation: false, receivedTear: false, musicPuzzleSolved: false, fiyeroHint: false, finalSpellFailed: false },
+            grimmerieRecipeIndex: 0,
+            usedCodes: []
+        };
+
+        // DOM Elements
+        const gameTextEl = document.getElementById('game-text');
+        const castCounterTextEl = document.getElementById('cast-counter-text');
+        const currentLocationTextEl = document.getElementById('current-location-text');
+        const actionsContainerEl = document.getElementById('actions-container');
+        const locationsContainerEl = document.getElementById('locations-container');
+        const inventoryContainerEl = document.getElementById('inventory-container');
+        const emptyInventoryTextEl = document.getElementById('empty-inventory-text');
+        const grimmerieButtonContainer = document.getElementById('grimmerie-button-container');
+        
+        const grimmerieModalEl = document.getElementById('grimmerie-modal');
+        const scryButton = document.getElementById('scry-button');
+        const spellbookTabButton = document.getElementById('spellbook-tab-button');
+        const spellbookSection = document.getElementById('spellbook-section');
+        const grimmerieTabsEl = document.getElementById('grimmerie-tabs');
+        const schematicNameEl = document.getElementById('schematic-name');
+        const grimmerieIngredientsEl = document.getElementById('grimmerie-ingredients');
+        const weaveSpellBtn = document.getElementById('weave-spell-btn');
+        const closeGrimmerieBtn = document.getElementById('close-grimmerie-btn');
+
+        const galindaModalEl = document.getElementById('galinda-modal');
+        const galindaModalTitleEl = document.getElementById('galinda-modal-title');
+        const galindaModalContentAreaEl = document.getElementById('galinda-modal-content-area');
+        const closeGalindaBtn = document.getElementById('close-galinda-btn');
+
+        const musicPuzzleModalEl = document.getElementById('music-puzzle-modal');
+        const submitMusicPuzzleBtn = document.getElementById('submit-music-puzzle-btn');
+        const leaveMusicPuzzleBtn = document.getElementById('leave-music-puzzle-btn');
+        const musicPuzzleFeedbackEl = document.getElementById('music-puzzle-feedback');
+
+        const puzzleModalEl = document.getElementById('puzzle-modal');
+        const submitPuzzleBtn = document.getElementById('submit-puzzle-btn');
+        const leavePuzzleBtn = document.getElementById('leave-puzzle-btn');
+        const puzzleFeedbackEl = document.getElementById('puzzle-feedback');
+        
+        let castInterval;
+
+        function updateGameText(text) { gameTextEl.innerHTML = text; }
+        function takeItem(itemName) { if (!gameState.inventory.includes(itemName)) { gameState.inventory.push(itemName); updateGameText(`You have acquired: <strong class='text-emerald-300'>${itemName}</strong>.`); render(); } else { updateGameText(`You already have <strong class='text-emerald-300'>${itemName}</strong>.`); } }
+        function reExamine() { const location = gameData.locations[gameState.currentLocation]; updateGameText(location.description); }
+
+        function weaveSpell() {
+            const spell = gameData.spellbook[gameState.grimmerieRecipeIndex];
+            const hasIngredients = spell.ingredients.every(ing => gameState.inventory.includes(ing));
+            if (hasIngredients) {
+                gameState.inventory = gameState.inventory.filter(item => !spell.ingredients.includes(item));
+                gameState.inventory.push(spell.recipe);
+                updateGameText(`You have successfully woven the <strong class='text-yellow-300'>${spell.recipe}</strong>!`);
+                if (spell.recipe === "Levitation Spell") gameState.logs.spellWeaved = true;
+                toggleGrimmerie(false);
+            }
+            render();
+        }
+        
+        function changeLocation(locationKey) {
+            if (gameState.gameWon) return;
+            gameState.currentLocation = locationKey;
+            const location = gameData.locations[gameState.currentLocation];
+            updateGameText(location.description);
+            render();
+        }
+
+        function toggleGrimmerie(show) {
+            if (show) {
+                spellbookSection.classList.add('hidden');
+                renderGrimmerie();
+                grimmerieModalEl.classList.remove('hidden');
+            } else {
+                grimmerieModalEl.classList.add('hidden');
+            }
+        }
+
+        function renderGrimmerie() {
+            grimmerieTabsEl.innerHTML = '';
+            gameData.spellbook.forEach((spell, index) => {
+                const tab = document.createElement('button');
+                tab.textContent = spell.recipe;
+                tab.className = `tab-btn flex-1 p-2 text-sm font-semibold text-gray-300 border-b-2 border-transparent hover:bg-emerald-800/50`;
+                if (index === gameState.grimmerieRecipeIndex) tab.classList.add('active', 'border-emerald-400');
+                tab.onclick = () => { gameState.grimmerieRecipeIndex = index; renderGrimmerie(); };
+                grimmerieTabsEl.appendChild(tab);
+            });
+
+            const spell = gameData.spellbook[gameState.grimmerieRecipeIndex];
+            schematicNameEl.textContent = spell.recipe;
+            grimmerieIngredientsEl.innerHTML = '';
+            let hasAllIngredients = true;
+            spell.ingredients.forEach(ingredient => {
+                const hasItem = gameState.inventory.includes(ingredient);
+                const li = document.createElement('div');
+                li.innerHTML = `<span class="inline-block w-6">${hasItem ? '✅' : '❌'}</span> ${ingredient}`;
+                li.className = `text-lg ${hasItem ? 'text-green-400' : 'text-gray-500 opacity-70'}`;
+                grimmerieIngredientsEl.appendChild(li);
+                if (!hasItem) hasAllIngredients = false;
+            });
+            weaveSpellBtn.disabled = !hasAllIngredients || gameState.inventory.includes(spell.recipe);
+            weaveSpellBtn.classList.toggle('opacity-50', weaveSpellBtn.disabled);
+            weaveSpellBtn.classList.toggle('cursor-not-allowed', weaveSpellBtn.disabled);
+        }
+
+        function scryLocation() {
+            const scryResult = gameData.scryData[gameState.currentLocation];
+            if (scryResult.static || !scryResult.code) {
+                updateGameText(scryResult.message || 'Scrying reveals nothing of interest here.');
+            } else if (scryResult.code) {
+                updateGameText(`You focus on the Grimmerie. A secret password for the Wizard's travel network manifests in your mind: <strong class="text-2xl text-yellow-300">${scryResult.code}</strong>. You should whisper this at a crossroads.`);
+            }
+            toggleGrimmerie(false);
+        }
+
+        function unlockLocations() {
+            const codeInput = document.getElementById('unlock-code-input');
+            const code = codeInput.value.toUpperCase();
+            if (gameState.usedCodes.includes(code)) {
+                updateGameText("This password has already been used.");
+                return;
+            }
+
+            const scryEntry = Object.values(gameData.scryData).find(entry => entry.code === code);
+            if (scryEntry) {
+                scryEntry.unlocks.forEach(locKey => { gameData.locations[locKey].isLocked = false; });
+                gameState.usedCodes.push(code);
+                updateGameText("The map of Oz shimmers and reveals new pathways to you.");
+                codeInput.value = '';
+                render();
+            } else {
+                updateGameText("The password fades into nothing. It is incorrect.");
+            }
+        }
+
+        function toggleGalindaModal(show) {
+            if (show) {
+                renderGalindaModal();
+                galindaModalEl.classList.remove('hidden');
+            } else {
+                galindaModalEl.classList.add('hidden');
+                render();
+            }
+        }
+
+        function renderGalindaModal() {
+            galindaModalContentAreaEl.innerHTML = '';
+            closeGalindaBtn.textContent = "That's all for now.";
+            closeGalindaBtn.onclick = () => toggleGalindaModal(false);
+
+            if (gameState.logs.glindaTransformation) {
+                galindaModalTitleEl.textContent = "A Word with Glinda";
+            } else {
+                galindaModalTitleEl.textContent = "A Word with Galinda";
+            }
+            
+            if (gameState.logs.finalSpellFailed && gameState.logs.glindaTransformation) {
+                let content = `<p class="text-lg">"Oh, Elphie... I heard what happened. Please be careful."</p>`;
+                if (!gameState.inventory.includes("Witch's Hat") || !gameState.inventory.includes("Tear of Regret")) {
+                    if (!gameState.inventory.includes("Witch's Hat")) gameState.inventory.push("Witch's Hat");
+                    if (!gameState.inventory.includes("Tear of Regret")) gameState.inventory.push("Tear of Regret");
+                    content = `<p class="text-lg">"Oh, you poor dear! To fail so publicly... It's simply dreadful! Here, you'll need these again if you're going to try that awful spell. Now go on, before you make a scene!"</p>`;
+                }
+                galindaModalContentAreaEl.innerHTML = content;
+                return;
+            }
+
+            if (gameState.inventory.includes("Propaganda Poster") && !gameState.logs.glindaTransformation) {
+                const content = document.createElement('div');
+                content.innerHTML = `
+                    <p class="text-lg">"Oh, Elphie, what's that ghastly poster?" she asks, pointing a perfectly manicured finger.</p>
+                    <p class="italic my-4">You show her the poster. She reads it, her cheerful expression slowly falling.</p>
+                    <p class="text-lg">"Is this... is this trying to make the Animals look bad? To make people... hate them? Like they did with Doctor Dillamond?"</p>
+                    <button id="glinda-reveal-btn" class="mt-4 bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 px-4 rounded-lg game-btn">"I think so, Galinda."</button>
+                `;
+                galindaModalContentAreaEl.appendChild(content);
+                document.getElementById('glinda-reveal-btn').onclick = () => {
+                    gameState.logs.glindaTransformation = true;
+                    gameState.inventory = gameState.inventory.filter(item => item !== "Propaganda Poster");
+                    const revealContent = document.createElement('div');
+                    revealContent.innerHTML = `
+                        <p class="italic my-4">A single tear rolls down her cheek. She wipes it away, her gaze hardening with a new resolve.</p>
+                        <p class="text-lg">"No. This is wrong. My name... it's Glinda. The 'Ga' is silent from now on. In his honor."</p>
+                        <p class="italic my-4">She carefully catches the tear in a small vial and hands it to you.</p>
+                        <p class="text-lg">"Here. For whatever you're planning. Please... be careful."</p>
+                    `;
+                    galindaModalContentAreaEl.innerHTML = '';
+                    galindaModalContentAreaEl.appendChild(revealContent);
+                    takeItem("Tear of Regret");
+                    closeGalindaBtn.textContent = "Call her Glinda";
+                    render();
+                };
+
+            } else if (!gameState.logs.galindaQuestionAnswered) {
+                const content = document.createElement('div');
+                content.innerHTML = `
+                    <p class="text-lg">"Oh, Elphie, you look so... serious! It's simply not 'popular'! Speaking of which, what is the most important ingredient for being popular? Is it..."</p>
+                    <div class="space-y-2 mt-4">
+                        <button onclick="answerGalindaQuestion(false)" class="w-full bg-purple-200 hover:bg-purple-300 text-purple-800 font-bold py-2 px-4 rounded-lg game-btn">"To be well-liked and admired?"</button>
+                        <button onclick="answerGalindaQuestion(true)" class="w-full bg-purple-200 hover:bg-purple-300 text-purple-800 font-bold py-2 px-4 rounded-lg game-btn">"To know what people want to hear?"</button>
+                    </div>
+                `;
+                galindaModalContentAreaEl.appendChild(content);
+            } else {
+                galindaModalContentAreaEl.innerHTML = `<p class="text-lg">"Do be careful, Elphie. This path you're on... it's not a popular one."</p>`;
+            }
+        }
+
+        function answerGalindaQuestion(isCorrect) {
+            if (isCorrect) {
+                galindaModalContentAreaEl.innerHTML = `<p class="text-lg">"Exactly! You're smarter than you look. Honestly, if you're going to have this... new reputation, you need to look the part. Here, take this. It's perfectly loathsome."</p>`;
+                takeItem("Witch's Hat");
+                gameState.logs.galindaQuestionAnswered = true;
+            } else {
+                galindaModalContentAreaEl.innerHTML = `<p class="text-lg">"Oh, sweetie, no. That's what you get from it, not how you get it. You're hopeless! Try thinking about it some more."</p>`;
+            }
+        }
+        
+        function solveMusicPuzzle() {
+            const solution = gameData.musicPuzzle.solution;
+            const guess = [
+                document.getElementById('music-input-1').value.toUpperCase(),
+                document.getElementById('music-input-2').value.toUpperCase(),
+                document.getElementById('music-input-3').value.toUpperCase(),
+                document.getElementById('music-input-4').value.toUpperCase()
+            ];
+
+            if (guess.join('') === solution.join('')) {
+                musicPuzzleFeedbackEl.textContent = "Correct! The music box clicks open!";
+                musicPuzzleFeedbackEl.className = "text-green-400 h-6";
+                gameState.logs.musicPuzzleSolved = true;
+                takeItem("Fiyero's Family Crest");
+                document.getElementById('submit-music-puzzle-btn').disabled = true;
+            } else {
+                musicPuzzleFeedbackEl.textContent = "Incorrect melody. The lock remains sealed.";
+                ['music-input-1', 'music-input-2', 'music-input-3', 'music-input-4'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('music-input-1').focus();
+            }
+        }
+
+        function render() {
+            if (gameState.gameWon) return;
+            const location = gameData.locations[gameState.currentLocation];
+            currentLocationTextEl.textContent = location.name;
+            castCounterTextEl.textContent = '';
+            actionsContainerEl.innerHTML = '';
+            
+            const reExamineButton = document.createElement('button');
+            reExamineButton.textContent = "Observe Surroundings";
+            reExamineButton.className = "game-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg w-full";
+            reExamineButton.onclick = reExamine;
+            actionsContainerEl.appendChild(reExamineButton);
+
+            if (location.actions) {
+                location.actions.forEach(action => {
+                    if (action.name === 'Cast Spell of Revealing' && !gameState.inventory.includes('Spell of Revealing')) {
+                        return; 
+                    }
+                    if (action.item && gameState.inventory.includes(action.item)) return;
+                    if (action.name === 'Place Spell Components' && gameState.logs.potionPlaced) return;
+                    if (action.name === 'Activate the Grimmerie' && !gameState.logs.potionPlaced) return;
+                    
+                    const button = document.createElement('button');
+                    button.textContent = action.name;
+                    if (action.character) {
+                        button.textContent = gameState.logs.glindaTransformation ? "Talk to Glinda" : "Talk to Galinda";
+                        button.className = "game-btn bg-pink-500 hover:bg-pink-400 text-white font-bold py-2 px-4 rounded-lg w-full";
+                    } else {
+                        button.className = "game-btn bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg w-full";
+                    }
+                    button.onclick = () => action.run(gameState);
+                    actionsContainerEl.appendChild(button);
+                });
+            }
+            
+            if (gameState.currentLocation === 'shiz') {
+                const unlockDiv = document.createElement('div');
+                unlockDiv.className = 'col-span-2 md:col-span-4 bg-black/30 p-4 rounded-lg flex flex-col sm:flex-row items-center gap-2 border border-emerald-900';
+                unlockDiv.innerHTML = `
+                    <label for="unlock-code-input" class="font-semibold text-emerald-300 flex-shrink-0">Whisper Password:</label>
+                    <input type="text" id="unlock-code-input" maxlength="10" class="bg-gray-800 text-white rounded-md p-2 w-full sm:w-auto flex-grow text-center uppercase" placeholder="Secret Word">
+                    <button id="unlock-submit-btn" class="game-btn bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg w-full sm:w-auto">Speak</button>
+                `;
+                actionsContainerEl.appendChild(unlockDiv);
+                document.getElementById('unlock-submit-btn').onclick = unlockLocations;
+            }
+            
+            if (gameState.currentLocation === 'emeraldCity' && gameState.inventory.includes('Empowered Spell') && !gameState.logs.spellReady) {
+                const prepareButton = document.createElement('button');
+                prepareButton.textContent = "Prepare the Spell";
+                prepareButton.className = "game-btn bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded-lg w-full col-span-2 md:col-span-4";
+                prepareButton.onclick = () => { gameState.logs.spellReady = true; updateGameText("You find a high balcony overlooking the parade route. The crowd cheers for the Wizard below, oblivious. You hold the Grimmerie tight. The moment is now."); render(); };
+                actionsContainerEl.appendChild(prepareButton);
+            }
+            if (gameState.logs.spellReady && gameState.currentLocation === 'emeraldCity') {
+                const castButton = document.createElement('button');
+                castButton.textContent = "CAST THE SPELL!";
+                castButton.className = "game-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg w-full col-span-2 md:col-span-4";
+                castButton.onclick = startCastingSequence;
+                actionsContainerEl.appendChild(castButton);
+            }
+
+            grimmerieButtonContainer.innerHTML = '';
+            if (gameState.logs.grimmerieOpened) {
+                 const grimmerieButton = document.createElement('button');
+                 grimmerieButton.textContent = "Open Grimmerie";
+                 grimmerieButton.className = "game-btn bg-purple-800 hover:bg-purple-700 text-white font-bold py-1 px-3 rounded-lg text-sm";
+                 grimmerieButton.onclick = () => toggleGrimmerie(true);
+                 grimmerieButtonContainer.appendChild(grimmerieButton);
+            }
+
+            locationsContainerEl.innerHTML = '';
+            const locationOrder = ['shiz', 'cornfield', 'vinkus', 'kiamoKo', 'emeraldCity', 'munchkinland', 'timeDragonClock', 'shadedWoods'];
+            locationOrder.forEach(key => {
+                const loc = gameData.locations[key];
+                if (loc.isLocked) return;
+                const button = document.createElement('button');
+                button.textContent = loc.name;
+                button.className = "game-btn bg-gray-800 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg w-full";
+                if (gameState.currentLocation === key) { button.disabled = true; button.className += " bg-emerald-900 cursor-not-allowed"; }
+                button.onclick = () => changeLocation(key);
+                locationsContainerEl.appendChild(button);
+            });
+
+            inventoryContainerEl.innerHTML = '';
+            if (gameState.inventory.length > 0) {
+                emptyInventoryTextEl.classList.add('hidden');
+                gameState.inventory.forEach(item => {
+                    const itemEl = document.createElement('div');
+                    itemEl.textContent = item;
+                    itemEl.title = gameData.items[item];
+                    itemEl.className = "bg-emerald-900/50 text-emerald-300 py-1 px-3 rounded-md text-sm font-medium cursor-help";
+                    inventoryContainerEl.appendChild(itemEl);
+                });
+            } else {
+                inventoryContainerEl.appendChild(emptyInventoryTextEl);
+                emptyInventoryTextEl.classList.remove('hidden');
+            }
+        }
+        
+        function solvePuzzle() {
+            const solution = gameData.locations.timeDragonClock.puzzle.solution;
+            const guess = [
+                document.getElementById('puzzle-input-1').value.toUpperCase(),
+                document.getElementById('puzzle-input-2').value.toUpperCase(),
+                document.getElementById('puzzle-input-3').value.toUpperCase()
+            ];
+
+            if (guess.join('') === solution.join('')) {
+                puzzleFeedbackEl.textContent = "Correct! The Grimmerie accepts the word, and the spell glows with immense power!";
+                puzzleFeedbackEl.className = "text-green-400 h-6";
+                gameState.logs.puzzleSolved = true;
+                gameState.inventory = gameState.inventory.filter(item => item !== "Levitation Spell");
+                gameState.inventory.push("Empowered Spell");
+                submitPuzzleBtn.disabled = true;
+            } else {
+                puzzleFeedbackEl.textContent = "Incorrect. The Grimmerie rejects the word.";
+                document.getElementById('puzzle-input-1').value = ''; document.getElementById('puzzle-input-2').value = ''; document.getElementById('puzzle-input-3').value = ''; document.getElementById('puzzle-input-1').focus();
+            }
+        }
+        
+        function startCastingSequence() {
+            gameState.castClicks = 0;
+            let countdown = 10;
+            const castButton = Array.from(actionsContainerEl.children).find(btn => btn.textContent.includes("CAST"));
+            castButton.textContent = `GATHER POWER! (${countdown})`;
+            castButton.onclick = () => { gameState.castClicks++; castCounterTextEl.textContent = `Magic Gathered: ${gameState.castClicks}`; };
+            updateGameText("The spell resists! You must force your will upon it! Gather your magic! Repeatedly press the button!");
+            castCounterTextEl.textContent = `Magic Gathered: 0`;
+            castInterval = setInterval(() => {
+                countdown--;
+                castButton.textContent = `GATHER POWER! (${countdown})`;
+                if (countdown <= 0) { clearInterval(castInterval); if (gameState.castClicks >= 40) { winGame(); } else { failCast(); } }
+            }, 1000);
+        }
+
+        function winGame() {
+            gameState.gameWon = true;
+            document.body.innerHTML = `<div class="w-full max-w-4xl mx-auto game-container rounded-2xl p-8 text-center space-y-6"><h1 class="text-5xl font-bold text-green-400 font-cinzel">DEFYING GRAVITY</h1><p class="text-xl text-gray-200">You scream the final words of the spell! A wave of green energy erupts from the Grimmerie, washing over the Wizard's new Winged Monkeys. They rise into the air, their wings unfurling not in menace, but in freedom. The crowd gasps. The Wizard's lies are exposed. You have shown them the truth.</p><p class="text-lg text-gray-400">You are now, truly, the Wicked Witch of the West.</p><button onclick="location.reload()" class="mt-4 game-btn bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg">Play Again</button></div>`;
+        }
+
+        function failCast() {
+            updateGameText("You couldn't gather enough magic in time. The spell fizzles, the energy dissipating harmlessly. The Wizard's guards are alerted to your position! The spell's components have been consumed. <br><strong class='text-red-400'>You must flee and try again!</strong>");
+            castCounterTextEl.textContent = '';
+            gameState.logs.finalSpellFailed = true;
+            gameState.logs.spellReady = false; 
+            gameState.logs.spellWeaved = false; 
+            gameState.logs.puzzleSolved = false; 
+            gameState.logs.potionPlaced = false;
+            gameState.inventory = gameState.inventory.filter(item => 
+                item !== 'Empowered Spell' &&
+                item !== 'Levitation Spell' &&
+                item !== 'Defiance Potion' &&
+                item !== 'A Heartfelt Locket'
+            );
+            changeLocation('shiz'); // Flee back to a safe spot
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateGameText("You are Elphaba. Your friend, the Animal professor Doctor Dillamond, has just been taken away. He left you a book... an ancient and powerful Grimmerie. You feel a new, terrible resolve hardening in your heart. The Wizard must be stopped.");
+            render();
+            weaveSpellBtn.addEventListener('click', weaveSpell);
+            scryButton.addEventListener('click', scryLocation);
+            spellbookTabButton.addEventListener('click', () => spellbookSection.classList.toggle('hidden'));
+            closeGrimmerieBtn.addEventListener('click', () => toggleGrimmerie(false));
+            closeGalindaBtn.addEventListener('click', () => toggleGalindaModal(false));
+            
+            submitMusicPuzzleBtn.addEventListener('click', solveMusicPuzzle);
+            leaveMusicPuzzleBtn.addEventListener('click', () => musicPuzzleModalEl.classList.add('hidden'));
+
+            submitPuzzleBtn.addEventListener('click', solvePuzzle);
+            leavePuzzleBtn.addEventListener('click', () => {
+                puzzleModalEl.classList.add('hidden');
+                if(gameState.logs.puzzleSolved) { updateGameText("The spell is empowered and ready. You must get to the Emerald City to reveal the truth."); render(); }
+            });
+        });
+
+    </script>
+</body>
+</html>
