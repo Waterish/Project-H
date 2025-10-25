@@ -1,0 +1,117 @@
+Project: "Hyperhouse"
+Software Design Document (SDD) - v1.0
+
+1. Introduction
+1.1 Project Overview
+"Project Hyperhouse" is a 4D Spatial-Puzzle Roguelite. Players navigate a procedurally generated 4-dimensional "hyperhouse" from a 3-dimensional perspective. The core of the game is about "thinking in 4D" by manipulating the 4th-dimensional axis (W-axis) to solve 3-dimensional problems.
+
+1.2 Core Concept & Hook
+The game aims to do for 4D spatial geometry what Balatro did for probability—distill a complex, academic concept into a simple, addictive, and replayable "one-more-run" gameplay loop.
+
+1.3 Target Audience
+* Players of indie roguelites (Hades, Slay the Spire, Balatro)
+* Fans of mind-bending puzzle games (Fez, Antichamber, Blue Prince)
+* Players who enjoy co-op puzzle-solving (Keep Talking and Nobody Explodes)
+
+2. Core Gameplay Mechanics
+2.1 The 4D "Slice"
+The game world is a 4-dimensional grid (e.g., 3x3x3x3). The player's coordinates are (x, y, z, w).
+* The player only ever perceives one 3D "slice" at a time. This slice is the XYZ "floor" at their current W coordinate.
+* The W-axis represents "Realms." For example:
+   * W=1: The "Kata Realm" (The house as it is; "Present")
+   * W=2: The "Centra Realm" (A ruined, overgrown version; "Ruin")
+   * W=3: The "Ana Realm" (A fractured, sterile version; "Echo")
+   
+2.2 The "Shift" (Ana/Kata)
+This is the primary player action.
+* The player presses a "Shift" button to instantly translate along the W-axis (e.g., from W=1 to W=2).
+* This causes the entire 3D world to "flicker" and be replaced by the 3D slice of the new realm.
+* This action is instant, fast, and the core of all navigation and puzzle-solving.
+
+2.3 The "4D Detour" (Core Loop)
+This is the foundational gameplay loop that teaches the 4D concept.
+1. Problem (3D): The player is in room (2,2,1,1) and is blocked by a solid 3D wall to the East.
+2. Action (4D): The player "Shifts" (Ana) to the W=2 realm.
+3. Solution (4D): In the "Ruin" realm, the wall at (2,2,1,2) has crumbled and is no longer an obstacle. The player walks East into room (3,2,1,2).
+4. Result (3D): The player "Shifts" (Kata) back to the W=1 realm. They are now in room (3,2,1,1), on the other side of the 3D wall.
+
+2.4 Player Controls (Prototype)
+* WASD: Move along the X/Y axes.
+* Q / E: Move along the Z-axis ("change floors").
+* Spacebar / Shift: "Shift" along the W-axis ("change realms").
+
+2.5 The Pursuer
+An optional antagonist (e.g., for a specific game mode) that also exists in 4D. It moves between XYZ rooms and can also "Shift" between W realms, creating a 4-dimensional game of cat-and-mouse.
+
+3. Roguelite Structure & Progression
+3.1 The "Run"
+A single attempt to navigate the procedurally generated Hyperhouse from a starting point to a defined "Exit" or "Goal." Each run features a unique house layout, item drops, and challenges.
+
+3.2 Intra-Run Progression (The "Build")
+Items and abilities found during a run that are lost on death or reset. The player's "build" is defined by the synergies between the items they find.
+* Synergistic Items: The key feature. Items have different functions depending on the player's current W-realm.
+   * Example 1: "The Lantern"
+      * W=1 (Present): Reveals the 2D map for the current Z-floor.
+      * W=2 (Ruin): Emits a light that repels the Pursuer, creating a small safe zone.
+      * W=3 (Echo): The light solidifies "phantom bridges" over 3D gaps.
+   * Example 2: "The Chrono-Key"
+      * W=1 (Present): Opens any standard locked XYZ door.
+      * W=2 (Ruin): "Repairs" one broken object (e.g., a ladder, a hyperdoor) to its W=1 state.
+      * W=3 (Echo): Can be used on a blank wall to create a temporary, 10-second doorway.
+* Information-as-Resource: Abilities focused on navigating the 4D space.
+   * Active Ability: "Glimpse"
+      * Hold a button to "peek" at the same XYZ room in the adjacent W-realm.
+      * Renders as a ghostly, colored overlay.
+      * Used to check for paths, traps, or enemies before committing to a "Shift."
+   * Passive Item: "Echo-Locator"
+      * Provides an audio/visual cue when an item or enemy is one XYZ tile away (through a wall/floor).
+      * Synergy: If the player also has "Glimpse," the "Glimpse" can now see through walls.
+      
+3.3 Meta-Progression (The "Reset")
+What the player earns between runs to make future runs different and more manageable.
+* Meta-Currency: "Dimensional Echoes"
+   * Collected during runs, kept on reset.
+   * Spent in the "Lobby" (the W=0 realm) between runs.
+* Lobby Unlocks:
+   * New Starting Items: Add new items to the player's starting loadout choices.
+   * New Abilities: Unlock new active abilities like "Glimpse."
+   * "House Blueprints": Add new, rare, and complex rooms (e.g., "The 4D Library," "The Observatory") to the procedural generation pool for all future runs.
+   * Realm Unlocks: Unlock access to deeper, more complex W-slices (e.g., W=3, W=4).
+* The "Forking Run" Goal:
+   * The "Final Door" of the house requires 3 "Final Keys" to open.
+   * These keys are located in W=1, W=2, and W=3, respectively.
+   * The player can only carry one Final Key at a time.
+   * Loop: This forces the player to complete a full run to get the W=1 key, then reset. Then, do another run to get the W=2 key, and reset. This "reset" is a required, non-punishing part of the core progression, forcing mastery of each realm.
+   
+4. Advanced Strategic Mechanics
+These are run-defining "major choices" that create high-risk/high-reward scenarios.
+* Mechanic: "The Hyper-Anchor"
+   * The player finds a rare "Anchor Room."
+   * Choice: "Lock Down" a W-Realm (e.g., W=1).
+   * Pro: The player gains a permanent, real-time map overlay of the W=1 slice, visible while they are in W=2 or W=3. This is a massive navigation buff.
+   * Con: The W=1 realm becomes physically inaccessible for the rest of the run. All its doors seal, all its items vanish.
+* Mechanic: "The Realm-Link"
+   * The player finds a "Linked Key" in one realm (e.g., W=1) and a corresponding "Linked Door" in another (e.g., W=2).
+   * Pro: Using the key creates a permanent, two-way shortcut between (x,y,z,1) and (x,y,z,2), saving time.
+   * Con: This shortcut can now be used by the Pursuer.
+   
+5. Multiplayer Mode (Asymmetric Co-op)
+* Concept: Two players, one house, two separate realms. Communication is the only tool.
+* Setup:
+   * Player 1 starts at (1,1,1,1) (Kata Realm).
+   * Player 2 starts at (1,1,1,2) (Centra Realm).
+* Gameplay Loop:
+   * Players are in the same XYZ coordinate space but cannot see or interact with each other directly.
+   * Puzzles are cross-dimensional. Player 1 will be in a room with a keypad. Player 2, in their "ruined" version of the same room, will see the code scrawled on the wall. Player 1 must enter the code they hear from Player 2.
+   * Shared State: Actions can have cross-realm consequences. Player 1 might flip a "Main Power" switch, which does nothing in their realm but turns on the lights and opens doors for Player 2.
+   
+6. Technical Design & Aesthetics
+* Engine: LÖVE 2D & Lua.
+* Graphics: 3D Oblique Projection (as prototyped). This style provides a clear, readable, "blueprint" feel while still showing 3D form. Graphics will be simple but stylish.
+* The "Shift" Effect: This is the game's core "wow" factor. It must be instant, tactile, and satisfying.
+   * A "flicker" or "static" visual effect.
+   * A heavy, distinct audio "pop" or "thump."
+   * Each realm will have its own full-screen visual filter (e.g., desaturation, chromatic aberration, glowing edges).
+* Audio Design: Critical for immersion and mechanics.
+   * Realms: Each W-realm has a distinct ambient soundscape (e.g., W=1=normal wind/creaks, W=2=low fire crackle/hiss).
+   * Sensing: The "Sensing" mechanic will be primarily audio. When the Pursuer enters (2,2,1,2), the player at (2,2,1,1) will suddenly hear the W=2 "crackle" soundscape bleed into their own.
