@@ -1,5 +1,60 @@
-Space Life - Python/Kivy EditionThis is a Python version of the web-based game "Space Life", rebuilt using the Kivy framework for cross-platform deployment, including Android.Project Structuremain.py: The main entry point of the application. It sets up the Kivy app and the main game widget, and bridges the UI with the game logic.game_logic.py: Contains the GameLogic class, which manages the game state and all core mechanics. This file is UI-agnostic.game_data.py: Stores the large initial game state dictionary, keeping static data separate from the application logic.spacelife.kv: The Kivy language file that defines the layout and appearance of the user interface.buildozer.spec: The configuration file for Buildozer, used to package the Python application into an Android APK.savegame.json: This file will be created automatically in the app's data directory to persist your game state.How to Run and DeployPrerequisitesPython: Make sure you have Python 3 installed.Kivy: Install Kivy and its dependencies:pip install "kivy[full]"
+# Space Life - Python/Kivy Edition
+
+This is a Python3 version of the web-based game "Space Life", rebuilt using the Kivy framework for cross-platform deployment, including Android.
+
+## Project Structure
+
+### main.py
+The main entry point of the application.
+
+It sets up the Kivy app and the main game widget, and bridges the UI with the game logic.
+
+### game_logic.py
+Contains the GameLogic class, which manages the game state and all core mechanics. This file is UI-agnostic.
+
+### game_data.py
+Stores the large initial game state dictionary, keeping static data separate from the application logic.
+
+### spacelife.kv
+The Kivy language file that defines the layout and appearance of the user interface.
+
+### buildozer.spec
+The configuration file for Buildozer, used to package the Python application into an Android APK.
+
+### savegame.json
+This file will be created automatically in the app's data directory to persist your game state.
+
+## How to Run and Deploy
+
+### Prerequisites
+
+Python: Make sure you have Python 3 installed.
+
+Kivy: Install Kivy and its dependencies:
+```pip install "kivy[full]"```
+
 Buildozer: Install Buildozer for packaging:pip install buildozer
-Android SDK/NDK: Buildozer will attempt to download the required Android tools for you the first time you run it. Follow any on-screen prompts.Running on DesktopTo test the application on your computer before deploying, simply run the main.py file:python main.py
-Building for AndroidPlace all the project files (main.py, game_logic.py, game_data.py, spacelife.kv, buildozer.spec) in the same directory.Open your terminal or command prompt in that directory.Run the following Buildozer command:buildozer android debug deploy run
-This command will:Download the necessary Android SDK and NDK if you don't have them.Build the Python code and its dependencies into an Android project.Compile the project into a debug APK file.Install the APK onto a connected Android device (the device must have USB debugging enabled).Run the application on the device.The first build can take a very long time. Subsequent builds will be much faster.
+*__[how and which version?]__*
+
+Android SDK/NDK: Buildozer will attempt to download the required Android tools for you the first time you run it. Follow any on-screen prompts.
+
+## Running on Desktop
+
+To test the application on your computer before deploying, simply run the main.py file with the following command on the command line:  
+```python main.py```
+
+Future development will include a script shortcut to run this command for the user
+
+## Building for Android
+
+Place all the project files (main.py, game_logic.py, game_data.py, spacelife.kv, buildozer.spec) in the same directory.
+
+Open your terminal or command prompt in that directory.Run the following Buildozer command:
+```buildozer android debug deploy run```
+
+This command will:
+* Download the necessary Android SDK and NDK if you don't have them
+* Build the Python code and its dependencies into an Android project
+* Compile the project into a debug APK file
+* Install the APK onto a connected Android device (the device must have USB debugging enabled).Run the application on the device
+* The first build can take a very long time. Subsequent builds will be much faster
