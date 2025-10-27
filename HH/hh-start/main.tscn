@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3 uid="uid://udxnqhhthnc2"]
+
+[ext_resource type="Script" uid="uid://bbp2vagnj18kl" path="res://node_2d.gd" id="1_ig7tw"]
+
+[node name="Node2D" type="Node2D"]
+script = ExtResource("1_ig7tw")
+
+[node name="Label" type="Label" parent="."]
+offset_left = 282.0
+offset_top = 211.0
+offset_right = 404.0
+offset_bottom = 234.0
+text = "huh"
